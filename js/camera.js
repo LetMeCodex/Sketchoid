@@ -62,8 +62,8 @@ class Camera2D {
      * Add trauma with diminishing returns to prevent disorientation during combo bursts
      */
     addTrauma(amount) {
-        // Diminishing returns formula: each hit adds less when trauma is already high
-        const effectiveAmount = amount * (1.0 - this.trauma * 0.65);
+        const motionScale = (window.game && window.game.reducedMotion) ? 0.20 : 1.0;
+        const effectiveAmount = amount * motionScale * (1.0 - this.trauma * 0.65);
         this.trauma = Math.min(0.85, this.trauma + effectiveAmount);
     }
 
@@ -71,8 +71,9 @@ class Camera2D {
      * Trigger a directional camera punch with strict velocity clamping
      */
     punch(dirX, dirY, strength = 4.0) {
+        const motionScale = (window.game && window.game.reducedMotion) ? 0.25 : 1.0;
         const len = Math.hypot(dirX, dirY) || 1;
-        const clampedStrength = Math.min(5.0, strength);
+        const clampedStrength = Math.min(5.0, strength * motionScale);
         this.punchVelX += (dirX / len) * clampedStrength;
         this.punchVelY += (dirY / len) * clampedStrength;
 

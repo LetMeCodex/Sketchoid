@@ -461,6 +461,68 @@ class Game {
         document.getElementById('btnMenu')?.addEventListener('click', () => this.showMenu());
         document.getElementById('btnTheme')?.addEventListener('click', () => this.cycleTheme());
         document.getElementById('btnMute')?.addEventListener('click', () => this.toggleMute());
+
+        // Settings Modal & Accessibility
+        document.getElementById('btnSettings')?.addEventListener('click', () => {
+            document.getElementById('modalSettings')?.classList.remove('hidden');
+        });
+        document.getElementById('btnCloseSettings')?.addEventListener('click', () => {
+            document.getElementById('modalSettings')?.classList.add('hidden');
+        });
+
+        document.getElementById('sliderMusic')?.addEventListener('input', (e) => {
+            window.soundEngine?.setMusicVolume(parseFloat(e.target.value));
+        });
+        document.getElementById('sliderSFX')?.addEventListener('input', (e) => {
+            window.soundEngine?.setSFXVolume(parseFloat(e.target.value));
+        });
+
+        document.getElementById('chkReducedMotion')?.addEventListener('change', (e) => {
+            this.reducedMotion = e.target.checked;
+        });
+
+        document.getElementById('chkHighContrast')?.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.className = 'theme-high-contrast';
+            } else {
+                document.body.className = `theme-${this.currentThemeKey}`;
+            }
+        });
+
+        document.getElementById('btnFullscreen')?.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        });
+
+        // Mobile Touch Bar
+        const touchBar = document.getElementById('mobileTouchBar');
+        if (touchBar) {
+            const handleBarTouch = (e) => {
+                e.preventDefault();
+                if (e.touches.length > 0) {
+                    const rect = touchBar.getBoundingClientRect();
+                    const touchRatio = (e.touches[0].clientX - rect.left) / rect.width;
+                    this.inputState.mouseX = Math.max(0, Math.min(this.width, touchRatio * this.width));
+                    this.inputState.isUsingMouse = true;
+                    this.paddle.targetX = this.inputState.mouseX - this.paddle.width / 2;
+                }
+            };
+            touchBar.addEventListener('touchmove', handleBarTouch, { passive: false });
+            touchBar.addEventListener('touchstart', (e) => {
+                handleBarTouch(e);
+                this.handleActionTrigger();
+            }, { passive: false });
+        }
+
+        // Pause on window blur / tab defocus
+        window.addEventListener('blur', () => {
+            if (this.state === 'PLAYING') {
+                this.togglePause();
+            }
+        });
     }
 
     handleActionTrigger() {
@@ -585,6 +647,7 @@ class Game {
         this.theme = THEMES[this.currentThemeKey];
 
         document.body.className = `theme-${this.currentThemeKey}`;
+        window.soundEngine?.setPalette(this.currentThemeKey);
         const themeBtn = document.getElementById('btnTheme');
         if (themeBtn) themeBtn.innerText = `🎨 ${this.theme.name}`;
     }

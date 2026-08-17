@@ -1,7 +1,7 @@
 /**
- * SKETCHOID Procedural Soundscape 2.0 & 5-Layer Adaptive Soundtrack
- * Zero-latency Web Audio synthesizer with Velocity-Pitch Modulation,
- * 3-Layer Ruby Explosion synthesis, Boss Drones, and Real-Time Adaptive Dynamic Music.
+ * SKETCHOID Procedural Soundscape 2.0 & 5-Layer Adaptive Soundtrack (Theme 2.0 & Volume Controls)
+ * Zero-latency Web Audio synthesizer with separate SFX/Music gain busses, theme sound palettes,
+ * velocity-pitch scaling, 3-layer explosions, and real-time adaptive dynamic music.
  */
 
 class SoundEngine {
@@ -13,6 +13,12 @@ class SoundEngine {
         this.limiter = null;
         this.isMuted = false;
         this.isInitialized = false;
+
+        this.musicVolume = parseFloat(localStorage.getItem('sketchoid_vol_music') || '0.65');
+        this.sfxVolume = parseFloat(localStorage.getItem('sketchoid_vol_sfx') || '0.85');
+
+        // Current Theme Sound Palette: 'blueprint' | 'parchment' | 'neon' | 'cosmic'
+        this.currentPalette = 'blueprint';
 
         // Pentatonic Scale Matrix (C4 -> C7)
         this.pentatonicScale = [
@@ -38,9 +44,7 @@ class SoundEngine {
             isBoss: false
         };
 
-        // Bassline Sequence (C Minor Pentatonic)
         this.bassSequence = [130.81, 0, 146.83, 0, 164.81, 0, 196.00, 146.83];
-        // Arp Sequence (Shimmering Crystal)
         this.arpSequence = [523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 659.25, 587.33];
     }
 
@@ -51,7 +55,6 @@ class SoundEngine {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioCtx();
 
-            // Dynamics Limiter to prevent clipping
             this.limiter = this.ctx.createDynamicsCompressor();
             this.limiter.threshold.setValueAtTime(-3, this.ctx.currentTime);
             this.limiter.knee.setValueAtTime(6, this.ctx.currentTime);
@@ -61,15 +64,15 @@ class SoundEngine {
             this.limiter.connect(this.ctx.destination);
 
             this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+            this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
             this.masterGain.connect(this.limiter);
 
             this.sfxGain = this.ctx.createGain();
-            this.sfxGain.gain.setValueAtTime(0.9, this.ctx.currentTime);
+            this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
             this.sfxGain.connect(this.masterGain);
 
             this.musicGain = this.ctx.createGain();
-            this.musicGain.gain.setValueAtTime(0.65, this.ctx.currentTime);
+            this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
             this.musicGain.connect(this.masterGain);
 
             this.setupMusicLayers();
@@ -79,45 +82,59 @@ class SoundEngine {
         }
     }
 
+    setMusicVolume(val) {
+        this.musicVolume = Math.max(0, Math.min(1, val));
+        localStorage.setItem('sketchoid_vol_music', this.musicVolume.toString());
+        if (this.musicGain && this.ctx) {
+            this.musicGain.gain.setTargetAtTime(this.musicVolume, this.ctx.currentTime, 0.05);
+        }
+    }
+
+    setSFXVolume(val) {
+        this.sfxVolume = Math.max(0, Math.min(1, val));
+        localStorage.setItem('sketchoid_vol_sfx', this.sfxVolume.toString());
+        if (this.sfxGain && this.ctx) {
+            this.sfxGain.gain.setTargetAtTime(this.sfxVolume, this.ctx.currentTime, 0.05);
+        }
+    }
+
+    setPalette(themeKey) {
+        this.currentPalette = themeKey || 'blueprint';
+    }
+
     setupMusicLayers() {
         const now = this.ctx.currentTime;
 
-        // Layer 1: Ambient Tape Drone & Warm Low Pad
         this.musicState.ambientGain = this.ctx.createGain();
         this.musicState.ambientGain.gain.setValueAtTime(0.35, now);
         this.musicState.ambientGain.connect(this.musicGain);
 
-        // Layer 2: Pencil-Tap Percussion
         this.musicState.percussionGain = this.ctx.createGain();
         this.musicState.percussionGain.gain.setValueAtTime(0.0, now);
         this.musicState.percussionGain.connect(this.musicGain);
 
-        // Layer 3: Pentatonic Bassline (Activates at Combo 4+)
         this.musicState.bassGain = this.ctx.createGain();
         this.musicState.bassGain.gain.setValueAtTime(0.0, now);
         this.musicState.bassGain.connect(this.musicGain);
 
-        // Layer 4: Crystal Arpeggiator (Activates at Combo 8+)
         this.musicState.arpGain = this.ctx.createGain();
         this.musicState.arpGain.gain.setValueAtTime(0.0, now);
         this.musicState.arpGain.connect(this.musicGain);
 
-        // Layer 5: Frenzy / Boss Overdrive Synth (Activates in Frenzy / Boss)
         this.musicState.frenzyGain = this.ctx.createGain();
         this.musicState.frenzyGain.gain.setValueAtTime(0.0, now);
         this.musicState.frenzyGain.connect(this.musicGain);
 
-        // Start ambient warm chord
         this.startAmbientDrone();
     }
 
     startAmbientDrone() {
-        const chord = [65.41, 98.00, 130.81]; // C2, G2, C3
+        const chord = [65.41, 98.00, 130.81];
         for (const freq of chord) {
             const osc = this.ctx.createOscillator();
             const filter = this.ctx.createBiquadFilter();
 
-            osc.type = 'sine';
+            osc.type = this.currentPalette === 'neon' ? 'triangle' : 'sine';
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
             filter.type = 'lowpass';
@@ -129,9 +146,6 @@ class SoundEngine {
         }
     }
 
-    /**
-     * Update Dynamic Adaptive Soundtrack on game tick
-     */
     updateMusic(dt, comboStreak = 0, isCrystalFrenzy = false, isBoss = false, isPlaying = true) {
         if (!this.isInitialized || this.isMuted || !isPlaying) return;
 
@@ -142,18 +156,16 @@ class SoundEngine {
         const now = this.ctx.currentTime;
         const ms = this.musicState;
 
-        // Smoothly fade music layers based on player skill & game context
-        const targetPercussion = comboStreak >= 2 ? 0.40 : 0.15;
-        const targetBass = comboStreak >= 4 ? 0.45 : 0.0;
-        const targetArp = comboStreak >= 8 ? 0.40 : 0.0;
-        const targetFrenzy = (isCrystalFrenzy || isBoss) ? 0.50 : 0.0;
+        const targetPercussion = comboStreak >= 2 ? 0.38 : 0.12;
+        const targetBass = comboStreak >= 4 ? 0.42 : 0.0;
+        const targetArp = comboStreak >= 8 ? 0.38 : 0.0;
+        const targetFrenzy = (isCrystalFrenzy || isBoss) ? 0.48 : 0.0;
 
         ms.percussionGain.gain.setTargetAtTime(targetPercussion, now, 0.4);
         ms.bassGain.gain.setTargetAtTime(targetBass, now, 0.4);
         ms.arpGain.gain.setTargetAtTime(targetArp, now, 0.3);
         ms.frenzyGain.gain.setTargetAtTime(targetFrenzy, now, 0.25);
 
-        // Sequencer Clock (16th notes at 120 BPM = 0.125s per step)
         const stepInterval = 60 / ms.tempo / 4;
         ms.timer += dt;
 
@@ -165,18 +177,14 @@ class SoundEngine {
     }
 
     triggerSequencerStep(step, now) {
-        // Layer 2: Pencil-Tap Percussion
         if (this.musicState.percussionGain.gain.value > 0.05) {
             if (step % 4 === 0) {
-                // Low Kick Tap
                 this.synthesizePencilTap(now, 90, 0.06, 0.3);
             } else if (step % 2 === 0) {
-                // High Sketched Hi-Hat
-                this.synthesizePencilTap(now, 3200, 0.025, 0.18);
+                this.synthesizePencilTap(now, 3200, 0.025, 0.16);
             }
         }
 
-        // Layer 3: Bassline (8th notes)
         if (this.musicState.bassGain.gain.value > 0.05 && step % 2 === 0) {
             const bassIdx = Math.floor(step / 2) % this.bassSequence.length;
             const freq = this.bassSequence[bassIdx];
@@ -185,14 +193,12 @@ class SoundEngine {
             }
         }
 
-        // Layer 4: Crystal Arpeggiator (16th notes)
         if (this.musicState.arpGain.gain.value > 0.05) {
             const arpIdx = step % this.arpSequence.length;
             const freq = this.arpSequence[arpIdx];
             this.synthesizeArpNote(now, freq, 0.09);
         }
 
-        // Layer 5: Frenzy Lead Note
         if (this.musicState.frenzyGain.gain.value > 0.05 && step % 4 === 0) {
             const leadNotes = [1046.50, 1174.66, 1318.51, 1567.98];
             const freq = leadNotes[(step / 4) % leadNotes.length];
@@ -250,10 +256,10 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
-        osc.type = 'sine';
+        osc.type = this.currentPalette === 'neon' ? 'triangle' : 'sine';
         osc.frequency.setValueAtTime(freq, time);
 
-        gain.gain.setValueAtTime(0.25, time);
+        gain.gain.setValueAtTime(0.24, time);
         gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
         osc.connect(gain);
@@ -286,20 +292,14 @@ class SoundEngine {
         osc.stop(time + duration);
     }
 
-    /**
-     * SFX: Pentatonic Brick Chime with Velocity Scaling
-     */
     playBrickChime(comboIndex = 0, tier = 'emerald', velocity = 8.0) {
         if (!this.isInitialized || this.isMuted) return;
 
         const now = this.ctx.currentTime;
         const baseIndex = comboIndex % this.pentatonicScale.length;
-        
-        // Pitch shift based on ball velocity
         const velocityShift = Math.max(0, (velocity - 7.5) * 12);
         const freq = this.pentatonicScale[baseIndex] + velocityShift;
 
-        // Dual FM synthesis for crystalline resonance
         const carrier = this.ctx.createOscillator();
         const modulator = this.ctx.createOscillator();
         const modGain = this.ctx.createGain();
@@ -328,9 +328,6 @@ class SoundEngine {
         modulator.stop(now + 0.40);
     }
 
-    /**
-     * SFX: Perfect Rebound Harmonic Bell (High C6/E6/G6 shimmer)
-     */
     playPaddleBoing(offset = 0.5) {
         if (!this.isInitialized || this.isMuted) return;
 
@@ -354,16 +351,12 @@ class SoundEngine {
         osc.stop(now + 0.25);
     }
 
-    /**
-     * SFX: 3-Layer Ruby Explosion (Sub-Bass Boom + Transient Pop + Crystal Scatter)
-     */
     playExplosion(isNuke = false) {
         if (!this.isInitialized || this.isMuted) return;
 
         const now = this.ctx.currentTime;
-        const dur = isNuke ? 0.65 : 0.35;
+        const dur = isNuke ? 0.60 : 0.30;
 
-        // Layer 1: Sub-Bass Boom
         const subOsc = this.ctx.createOscillator();
         const subGain = this.ctx.createGain();
         subOsc.type = 'sine';
@@ -376,8 +369,7 @@ class SoundEngine {
         subOsc.start(now);
         subOsc.stop(now + dur);
 
-        // Layer 2: Noise Transient Pop
-        const bufferSize = this.ctx.sampleRate * 0.15;
+        const bufferSize = this.ctx.sampleRate * 0.12;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -389,11 +381,11 @@ class SoundEngine {
         const noiseFilter = this.ctx.createBiquadFilter();
         noiseFilter.type = 'lowpass';
         noiseFilter.frequency.setValueAtTime(isNuke ? 1800 : 900, now);
-        noiseFilter.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+        noiseFilter.frequency.exponentialRampToValueAtTime(100, now + 0.12);
 
         const noiseGain = this.ctx.createGain();
-        noiseGain.gain.setValueAtTime(0.4, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        noiseGain.gain.setValueAtTime(0.35, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
@@ -447,7 +439,7 @@ class SoundEngine {
         if (!this.isInitialized || this.isMuted) return;
 
         const now = this.ctx.currentTime;
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 major arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();

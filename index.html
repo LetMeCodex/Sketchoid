@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SKETCHOID &bull; The Living Sketchbook Arcade</title>
     <meta name="description" content="SKETCHOID: An interactive hand-drawn neo-Arkanoid living sketchbook arcade game built with Rough.js, Anime.js, and procedural pentatonic chime sound synthesis.">
     <link rel="stylesheet" href="style.css">
@@ -22,6 +22,7 @@
         <div class="top-actions">
             <button id="btnCollection" class="btn-sketch" title="Notebook Collection">📖 Collection</button>
             <button id="btnChallenges" class="btn-sketch" title="Challenge Modes">⚔️ Challenges</button>
+            <button id="btnSettings" class="btn-sketch" title="Settings & Accessibility">⚙️ Settings</button>
             <button id="btnTheme" class="btn-sketch" title="Switch Theme (Key: T)">🎨 Theme</button>
             <button id="btnMute" class="btn-sketch" title="Toggle Sound (Key: M)">🔊 Sound</button>
         </div>
@@ -29,42 +30,53 @@
 
     <!-- Main Game Container -->
     <main class="game-container">
-        <!-- Top HUD Dashboard -->
-        <div class="hud-bar">
+        <!-- Diegetic Top HUD Dashboard (Styled like handwritten notebook notes) -->
+        <div class="hud-bar diegetic-hud">
             <div class="hud-group">
-                <div class="hud-item">
-                    <span class="hud-label">Stage</span>
+                <!-- Taped Paper Tab for Stage -->
+                <div class="hud-item taped-tab">
+                    <span class="hud-label">SECTOR ✎</span>
                     <span id="hudLevelName" class="hud-level-tag">The Clean Draft</span>
                 </div>
-                <div class="hud-item">
-                    <span class="hud-label">Score</span>
+                <!-- Sticky Note for Score -->
+                <div class="hud-item sticky-note">
+                    <span class="hud-label">SCORE</span>
                     <span id="hudScore" class="hud-value">0</span>
                 </div>
-                <div class="hud-item">
-                    <span class="hud-label">High Score</span>
-                    <span id="hudHighScore" class="hud-value" style="color: #fbbf24;">0</span>
+                <!-- Sticky Note for High Score -->
+                <div class="hud-item sticky-note high-score-note">
+                    <span class="hud-label">RECORD ★</span>
+                    <span id="hudHighScore" class="hud-value">0</span>
                 </div>
             </div>
 
             <div class="hud-group">
                 <!-- Pentatonic Combo Multiplier Streak -->
-                <div id="hudComboContainer" class="combo-container">
+                <div id="hudComboContainer" class="combo-container diegetic-combo">
                     <div class="hud-item" style="text-align: right;">
-                        <span class="hud-label">Pentatonic Streak</span>
-                        <span id="hudCombo" class="hud-value" style="font-size: 0.95rem;">0 HITS</span>
+                        <span class="hud-label">PENTATONIC STREAK</span>
+                        <span id="hudCombo" class="hud-value">0 HITS</span>
                     </div>
                     <span id="hudMultiplier" class="combo-multiplier">1x</span>
                 </div>
 
-                <div class="hud-item" style="text-align: right;">
-                    <span class="hud-label">Lives</span>
-                    <span id="hudLives" class="hud-value" style="font-size: 1.1rem; letter-spacing: 2px;">❤️ ❤️ ❤️</span>
+                <!-- Hand-drawn Lives -->
+                <div class="hud-item taped-tab" style="text-align: right;">
+                    <span class="hud-label">SPHERES</span>
+                    <span id="hudLives" class="hud-value" style="font-size: 1.15rem; letter-spacing: 2px;">❤️ ❤️ ❤️</span>
                 </div>
             </div>
         </div>
 
         <!-- Hand-drawn 60fps Canvas -->
-        <canvas id="gameCanvas" width="800" height="640"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="800" height="640"></canvas>
+        </div>
+
+        <!-- Mobile Touch Bar -->
+        <div id="mobileTouchBar" class="mobile-touch-bar">
+            <span>👈 DRAG TO AIM / MOVE &bull; TAP TO LAUNCH 👉</span>
+        </div>
 
         <!-- Start Menu Modal -->
         <div id="modalMenu" class="modal-overlay">
@@ -76,6 +88,7 @@
                     <div class="feature-pill">💎 <strong>Materials:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
                     <div class="feature-pill">📐 <strong>Geometry:</strong> Windmills, Portals, Gravity Wells</div>
                     <div class="feature-pill">✏️ <strong>Boss Battle:</strong> The Arch-Pencil Live Drafter</div>
+                    <div class="feature-pill">🎵 <strong>Dynamic Audio:</strong> 5-Layer Adaptive Pentatonic Symphony</div>
                 </div>
 
                 <div class="modal-actions">
@@ -119,6 +132,38 @@
 
                 <div class="modal-actions">
                     <button id="btnCloseChallenges" class="btn-sketch btn-large btn-secondary">Close Challenges</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings & Accessibility Modal -->
+        <div id="modalSettings" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>⚙️ Settings & Accessibility</h2>
+                <p>Fine-tune audio levels, visual motion, and accessibility options.</p>
+
+                <div class="settings-form">
+                    <div class="settings-row">
+                        <label for="sliderMusic">🎵 Music Volume</label>
+                        <input type="range" id="sliderMusic" min="0" max="1" step="0.05" value="0.65">
+                    </div>
+                    <div class="settings-row">
+                        <label for="sliderSFX">💥 SFX Volume</label>
+                        <input type="range" id="sliderSFX" min="0" max="1" step="0.05" value="0.85">
+                    </div>
+                    <div class="settings-row toggle-row">
+                        <label for="chkReducedMotion">📳 Reduced Motion (Low Shake)</label>
+                        <input type="checkbox" id="chkReducedMotion">
+                    </div>
+                    <div class="settings-row toggle-row">
+                        <label for="chkHighContrast">👁️ High Contrast Mode</label>
+                        <input type="checkbox" id="chkHighContrast">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="btnFullscreen" class="btn-sketch">⛶ Fullscreen</button>
+                    <button id="btnCloseSettings" class="btn-sketch btn-secondary">Done</button>
                 </div>
             </div>
         </div>
@@ -228,138 +273,5 @@
     <script src="js/physics.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/game.js"></script>
-
-    <!-- Modal Event Listeners & UI Binding Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const btnCollection = document.getElementById('btnCollection');
-            const btnChallenges = document.getElementById('btnChallenges');
-            const modalCollection = document.getElementById('modalCollection');
-            const modalChallenges = document.getElementById('modalChallenges');
-            const btnCloseCollection = document.getElementById('btnCloseCollection');
-            const btnCloseChallenges = document.getElementById('btnCloseChallenges');
-
-            function renderCollection(tab = 'skins') {
-                const grid = document.getElementById('collectionItemsGrid');
-                if (!grid || !window.progression) return;
-                grid.innerHTML = '';
-
-                if (tab === 'skins') {
-                    window.progression.skins.forEach(skin => {
-                        const isUnlocked = window.progression.data.unlockedSkins.includes(skin.id);
-                        const isEquipped = window.progression.data.selectedSkin === skin.id;
-
-                        const card = document.createElement('div');
-                        card.className = `item-card ${isEquipped ? 'equipped' : ''} ${!isUnlocked ? 'locked' : ''}`;
-                        card.innerHTML = `
-                            <div class="item-title">${skin.icon} ${skin.name} ${isEquipped ? '✅' : ''}</div>
-                            <div class="item-desc">${skin.desc}</div>
-                            <div class="item-req">${isUnlocked ? (isEquipped ? 'Equipped' : 'Click to Equip') : '🔒 ' + skin.unlockReq}</div>
-                        `;
-                        if (isUnlocked) {
-                            card.style.cursor = 'pointer';
-                            card.onclick = () => {
-                                window.progression.selectSkin(skin.id);
-                                renderCollection('skins');
-                            };
-                        }
-                        grid.appendChild(card);
-                    });
-                } else if (tab === 'trails') {
-                    window.progression.trails.forEach(trail => {
-                        const isUnlocked = window.progression.data.unlockedTrails.includes(trail.id);
-                        const isEquipped = window.progression.data.selectedTrail === trail.id;
-
-                        const card = document.createElement('div');
-                        card.className = `item-card ${isEquipped ? 'equipped' : ''} ${!isUnlocked ? 'locked' : ''}`;
-                        card.innerHTML = `
-                            <div class="item-title">✨ ${trail.name} ${isEquipped ? '✅' : ''}</div>
-                            <div class="item-desc">${trail.desc}</div>
-                            <div class="item-req">${isUnlocked ? (isEquipped ? 'Equipped' : 'Click to Equip') : '🔒 ' + trail.unlockReq}</div>
-                        `;
-                        if (isUnlocked) {
-                            card.style.cursor = 'pointer';
-                            card.onclick = () => {
-                                window.progression.selectTrail(trail.id);
-                                renderCollection('trails');
-                            };
-                        }
-                        grid.appendChild(card);
-                    });
-                } else if (tab === 'badges') {
-                    window.progression.badgeDefinitions.forEach(badge => {
-                        const isUnlocked = window.progression.data.badges.includes(badge.id);
-
-                        const card = document.createElement('div');
-                        card.className = `item-card ${isUnlocked ? 'equipped' : 'locked'}`;
-                        card.innerHTML = `
-                            <div class="item-title">${badge.icon} ${badge.name} ${isUnlocked ? '🏅' : ''}</div>
-                            <div class="item-desc">${badge.desc}</div>
-                            <div class="item-req">${isUnlocked ? 'Earned!' : 'Locked'}</div>
-                        `;
-                        grid.appendChild(card);
-                    });
-                }
-            }
-
-            function renderChallenges() {
-                const grid = document.getElementById('challengesGrid');
-                if (!grid || !window.challengeManager) return;
-                grid.innerHTML = '';
-
-                window.challengeManager.challenges.forEach(ch => {
-                    const isBeaten = window.progression && window.progression.data.stats.challengesBeaten.includes(ch.id);
-
-                    const card = document.createElement('div');
-                    card.className = `item-card ${isBeaten ? 'equipped' : ''}`;
-                    card.innerHTML = `
-                        <div class="item-title">${ch.name} ${isBeaten ? '🏅 BEATEN' : ''}</div>
-                        <div class="item-desc">${ch.desc}</div>
-                        <button class="btn-sketch" style="margin-top: 6px; font-size: 0.8rem;">🚀 Launch Challenge</button>
-                    `;
-                    card.querySelector('button').onclick = () => {
-                        modalChallenges.classList.add('hidden');
-                        if (window.game) {
-                            window.challengeManager.startChallenge(ch.id, window.game);
-                        }
-                    };
-                    grid.appendChild(card);
-                });
-            }
-
-            btnCollection?.addEventListener('click', () => {
-                if (window.game && window.game.state === 'PLAYING') window.game.togglePause();
-                renderCollection('skins');
-                modalCollection.classList.remove('hidden');
-            });
-
-            btnChallenges?.addEventListener('click', () => {
-                if (window.game && window.game.state === 'PLAYING') window.game.togglePause();
-                renderChallenges();
-                modalChallenges.classList.remove('hidden');
-            });
-
-            btnCloseCollection?.addEventListener('click', () => modalCollection.classList.add('hidden'));
-            btnCloseChallenges?.addEventListener('click', () => modalChallenges.classList.add('hidden'));
-
-            document.getElementById('tabSkins')?.addEventListener('click', (e) => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                renderCollection('skins');
-            });
-
-            document.getElementById('tabTrails')?.addEventListener('click', (e) => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                renderCollection('trails');
-            });
-
-            document.getElementById('tabBadges')?.addEventListener('click', (e) => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                renderCollection('badges');
-            });
-        });
-    </script>
 </body>
 </html>
