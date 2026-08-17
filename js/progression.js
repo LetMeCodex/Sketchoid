@@ -344,18 +344,23 @@ class ProgressionManager {
         return false;
     }
 
-    unlockSkinDirect(skinId) {
-        if (!this.data.unlockedSkins.includes(skinId)) {
-            this.data.unlockedSkins.push(skinId);
+    selectTrail(trailId) {
+        if (this.data.unlockedTrails.includes(trailId)) {
+            this.data.player.selectedTrail = trailId;
+            this.data.selectedTrail = trailId;
             this.save();
+            return true;
         }
+        return false;
     }
 
-    unlockTrailDirect(trailId) {
-        if (!this.data.unlockedTrails.includes(trailId)) {
-            this.data.unlockedTrails.push(trailId);
+    selectDoodle(doodleId) {
+        if (this.data.unlockedDoodles.includes(doodleId)) {
+            this.data.identity.favoriteDoodle = doodleId;
             this.save();
+            return true;
         }
+        return false;
     }
 
     unlockDoodle(doodleId) {

@@ -1534,7 +1534,7 @@ class Game {
 
             for (const skin of window.progression.skins) {
                 const unlocked = pData.unlockedSkins.includes(skin.id);
-                const equipped = pData.player.selectedSkin === skin.id;
+                const equipped = pData.player.selectedSkin === skin.id || pData.selectedSkin === skin.id;
                 const card = document.createElement('div');
                 card.className = `collection-card ${equipped ? 'equipped' : ''}`;
 
@@ -1548,18 +1548,26 @@ class Game {
                 textContainer.innerHTML = `
                     <div class="collection-title">${skin.name}</div>
                     <div class="collection-desc">${skin.desc}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} Ink)`)}</button>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px; pointer-events: none;">${equipped ? 'EQUIPPED ✓' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
-                card.onclick = () => {
+
+                card.addEventListener('click', (e) => {
+                    e.preventDefault();
                     if (unlocked) {
                         window.progression.selectSkin(skin.id);
+                        window.soundEngine?.playWallTick();
+                        window.particleSystem?.addFloatingText(`EQUIPPED: ${skin.name}`, 400, 220, '#10b981', 1.5, true);
                         this.renderSketchbookTabs('identity');
                     } else if (window.progression.unlockSkinWithInk(skin.id)) {
+                        window.soundEngine?.playLevelClear();
+                        window.particleSystem?.addFloatingText(`UNLOCKED: ${skin.name}!`, 400, 220, '#fbbf24', 1.8, true);
                         this.renderSketchbookTabs('identity');
+                    } else {
+                        window.particleSystem?.addFloatingText(`NOT ENOUGH INK! (${skin.cost} needed)`, 400, 220, '#ef4444', 1.5, true);
                     }
-                };
-                this.attachTactilePhysics(card);
+                });
+
                 grid.appendChild(card);
                 SketchItemRenderer.drawItemIllustration(canvas, 'skins', skin.id, unlocked);
             }
@@ -1573,7 +1581,7 @@ class Game {
 
             for (const trail of window.progression.trails) {
                 const unlocked = pData.unlockedTrails.includes(trail.id);
-                const equipped = pData.player.selectedTrail === trail.id;
+                const equipped = pData.player.selectedTrail === trail.id || pData.selectedTrail === trail.id;
                 const card = document.createElement('div');
                 card.className = `collection-card ${equipped ? 'equipped' : ''}`;
 
@@ -1587,18 +1595,26 @@ class Game {
                 textContainer.innerHTML = `
                     <div class="collection-title">${trail.name}</div>
                     <div class="collection-desc">${trail.desc}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} Ink)`)}</button>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px; pointer-events: none;">${equipped ? 'EQUIPPED ✓' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
-                card.onclick = () => {
+
+                card.addEventListener('click', (e) => {
+                    e.preventDefault();
                     if (unlocked) {
                         window.progression.selectTrail(trail.id);
+                        window.soundEngine?.playWallTick();
+                        window.particleSystem?.addFloatingText(`EQUIPPED: ${trail.name}`, 400, 220, '#10b981', 1.5, true);
                         this.renderSketchbookTabs('identity');
                     } else if (window.progression.unlockTrailWithInk(trail.id)) {
+                        window.soundEngine?.playLevelClear();
+                        window.particleSystem?.addFloatingText(`UNLOCKED: ${trail.name}!`, 400, 220, '#fbbf24', 1.8, true);
                         this.renderSketchbookTabs('identity');
+                    } else {
+                        window.particleSystem?.addFloatingText(`NOT ENOUGH INK! (${trail.cost} needed)`, 400, 220, '#ef4444', 1.5, true);
                     }
-                };
-                this.attachTactilePhysics(card);
+                });
+
                 grid.appendChild(card);
                 SketchItemRenderer.drawItemIllustration(canvas, 'trails', trail.id, unlocked);
             }

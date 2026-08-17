@@ -171,7 +171,21 @@ h1 {
     transition: transform 0.16s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.16s ease, background-color 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+}
+
+.btn-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.logo-canvas {
+    display: block;
+    width: 175px;
+    height: 42px;
+    flex-shrink: 0;
 }
 
 .btn-sketch:hover {
@@ -526,15 +540,33 @@ h1 {
 
 .item-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
-    gap: 10px;
-    max-height: 270px;
-    overflow-y: auto;
-    padding: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-height: 380px;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding: 8px 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-sketch) transparent;
+}
+
+.item-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.item-grid::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 4px;
+}
+
+.item-grid::-webkit-scrollbar-thumb {
+    background: var(--border-sketch);
+    border-radius: 4px;
 }
 
 .collection-card {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--card-bg);
     border: 2px solid var(--border-sketch);
     border-radius: 8px;
     padding: 10px;
@@ -543,12 +575,13 @@ h1 {
     align-items: center;
     text-align: center;
     cursor: pointer;
-    transform-style: preserve-3d;
-    transition: transform 0.15s ease, background 0.15s ease;
+    box-shadow: 2px 2px 0px var(--border-sketch);
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .collection-card:hover {
     transform: translateY(-2px);
+    box-shadow: 3px 4px 0px var(--border-sketch);
     background: rgba(255, 255, 255, 0.08);
 }
 
