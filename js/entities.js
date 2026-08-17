@@ -1,6 +1,8 @@
 /**
- * SKETCHOID Game Entities & Physics Architecture (Phase 2.1 Overhaul)
- * Precision Swept Physics, Momentum-Transferred Paddle Slicing, and Deterministic CCD
+ * SKETCHOID Game Entities & Material Destruction Engine (Phase 2 Upgrade)
+ * Progressive Brick Damage States (Intact -> Damaged -> Cracked -> Fractured -> Debris),
+ * Material Physics (Ruby Chains, Amethyst Armor, Emerald Velocity, Amber Weakpoints),
+ * Laser Overheating Gauge, and Reworked Powerups.
  */
 
 class Paddle {
@@ -17,7 +19,7 @@ class Paddle {
         this.vx = 0;
         this.prevX = this.x;
 
-        // Swing velocity history buffer for momentum transfer
+        // Swing momentum history buffer
         this.posHistory = [];
         this.swingVelocity = 0;
 
@@ -34,10 +36,12 @@ class Paddle {
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
-        // Powerups active on paddle
+        // Powerups & Laser Heat Gauge
         this.hasLaser = false;
         this.laserTimer = 0;
         this.laserCooldown = 0;
+        this.laserHeat = 0; // 0 to 100
+        this.laserOverheated = false;
         this.laserTurretRecoilLeft = 0;
         this.laserTurretRecoilRight = 0;
 
@@ -61,64 +65,52 @@ class Paddle {
         this.scaleY = 1.0;
         this.hasLaser = false;
         this.laserTimer = 0;
+        this.laserHeat = 0;
+        this.laserOverheated = false;
         this.hasWide = false;
         this.wideTimer = 0;
     }
 
     triggerSquash(impactOffset = 0) {
-        // Asymmetric spring reaction: vertical squash, horizontal stretch
-        this.scaleY = 0.55;
-        this.scaleX = 1.38;
+        this.scaleY = 0.52;
+        this.scaleX = 1.42;
         this.springVelY = 0;
         this.springVelX = 0;
-
-        // Impact tilt kick
-        this.tilt += impactOffset * 0.15;
+        this.tilt += impactOffset * 0.16;
     }
 
     update(dt, inputState) {
         this.prevX = this.x;
 
-        // Smooth follow target X (Mouse or Keyboard)
-        const keyMoveSpeed = 18;
-        if (inputState.left) {
-            this.targetX -= keyMoveSpeed;
-        }
-        if (inputState.right) {
-            this.targetX += keyMoveSpeed;
-        }
+        const keyMoveSpeed = 19;
+        if (inputState.left) this.targetX -= keyMoveSpeed;
+        if (inputState.right) this.targetX += keyMoveSpeed;
 
-        // Clamp targetX within canvas boundaries
         this.targetX = Math.max(8, Math.min(this.canvasWidth - this.width - 8, this.targetX));
-
-        // Smooth responsive interpolation
-        this.x += (this.targetX - this.x) * 0.42;
+        this.x += (this.targetX - this.x) * 0.44;
         this.vx = this.x - this.prevX;
 
-        // Maintain swing velocity history for accurate kinetic momentum transfer
+        // Record swing velocity
         const now = performance.now();
         this.posHistory.push({ x: this.x, time: now });
-        if (this.posHistory.length > 5) {
-            this.posHistory.shift();
-        }
+        if (this.posHistory.length > 5) this.posHistory.shift();
 
         if (this.posHistory.length >= 2) {
             const oldest = this.posHistory[0];
             const newest = this.posHistory[this.posHistory.length - 1];
             const dtSec = (newest.time - oldest.time) / 1000;
             if (dtSec > 0.001) {
-                this.swingVelocity = (newest.x - oldest.x) / (dtSec * 60); // Normalized px/frame
+                this.swingVelocity = (newest.x - oldest.x) / (dtSec * 60);
             }
         }
 
-        // Paddle tilt based on velocity
+        // Tilt
         const targetTilt = Math.max(-0.16, Math.min(0.16, this.vx * 0.02));
         this.tilt += (targetTilt - this.tilt) * 0.25;
 
-        // Spring physics for squash & stretch
-        const k = 0.25; // Spring stiffness
-        const damping = 0.72; // Damping factor
-
+        // Spring
+        const k = 0.26;
+        const damping = 0.72;
         const forceX = (this.targetScaleX - this.scaleX) * k;
         this.springVelX = (this.springVelX + forceX) * damping;
         this.scaleX += this.springVelX;
@@ -127,10 +119,8 @@ class Paddle {
         this.springVelY = (this.springVelY + forceY) * damping;
         this.scaleY += this.springVelY;
 
-        // Smooth width transition for Wide Powerup
+        // Wide Paddle Width
         this.width += (this.targetWidth - this.width) * 0.16;
-
-        // Powerup timers
         if (this.hasWide) {
             this.wideTimer -= dt;
             this.targetWidth = this.baseWidth * 1.65;
@@ -142,19 +132,29 @@ class Paddle {
             this.targetWidth = this.baseWidth;
         }
 
+        // Laser Heat & Overheat Management
         if (this.hasLaser) {
             this.laserTimer -= dt;
             if (this.laserCooldown > 0) this.laserCooldown -= dt;
+            
+            // Heat cooldown
+            this.laserHeat = Math.max(0, this.laserHeat - dt * 38);
+            if (this.laserOverheated && this.laserHeat <= 20) {
+                this.laserOverheated = false;
+            }
+
             if (this.laserTimer <= 0) {
                 this.hasLaser = false;
+                this.laserHeat = 0;
+                this.laserOverheated = false;
             }
         }
 
-        // Laser turret recoil recovery
+        // Recoil
         this.laserTurretRecoilLeft = Math.max(0, this.laserTurretRecoilLeft - dt * 25);
         this.laserTurretRecoilRight = Math.max(0, this.laserTurretRecoilRight - dt * 25);
 
-        // Boiling seed cycle (every ~80ms)
+        // Boiling Seed
         this.seedTimer += dt;
         if (this.seedTimer > 0.08) {
             this.seedTimer = 0;
@@ -162,50 +162,48 @@ class Paddle {
         }
     }
 
-    /**
-     * Compute rebound trajectory vector given a ball collision
-     */
     calculateDeflection(ball) {
         const paddleCenter = this.x + this.width / 2;
         const rawOffset = (ball.x - paddleCenter) / (this.width / 2);
         const clampedOffset = Math.max(-0.96, Math.min(0.96, rawOffset));
 
-        // Parabolic launch angle from impact position (-65 deg to +65 deg)
         const baseAngle = -Math.PI / 2 + clampedOffset * 1.15;
-
-        // Add paddle swing momentum (English / slice)
-        const swingInfluence = Math.max(-4.5, Math.min(4.5, this.swingVelocity * 0.28));
+        const swingInfluence = Math.max(-4.8, Math.min(4.8, this.swingVelocity * 0.30));
         
         let newVx = Math.cos(baseAngle) * ball.speed + swingInfluence;
         let newVy = Math.sin(baseAngle) * ball.speed;
 
-        // Re-normalize to preserve ball speed
         const currentSpeed = Math.hypot(newVx, newVy);
         newVx = (newVx / currentSpeed) * ball.speed;
         newVy = (newVy / currentSpeed) * ball.speed;
 
-        // Ensure upward trajectory with safety angle bounds
         let angle = Math.atan2(newVy, newVx);
-        const minAngle = -Math.PI * 0.90; // ~-162 deg
-        const maxAngle = -Math.PI * 0.10; // ~-18 deg
+        const minAngle = -Math.PI * 0.90;
+        const maxAngle = -Math.PI * 0.10;
         angle = Math.max(minAngle, Math.min(maxAngle, angle));
 
         newVx = Math.cos(angle) * ball.speed;
         newVy = Math.sin(angle) * ball.speed;
 
-        // Impart spin to the ball based on paddle swing speed & impact offset
-        const impartedSpin = (swingInfluence * 0.4 + clampedOffset * 0.3);
+        const impartedSpin = (swingInfluence * 0.45 + clampedOffset * 0.35);
 
         return { vx: newVx, vy: newVy, offset: clampedOffset, spin: impartedSpin };
     }
 
     fireLasers() {
-        if (!this.hasLaser || this.laserCooldown > 0) return null;
-        this.laserCooldown = 0.18; // Fire rate limit
-        this.laserTurretRecoilLeft = 6;
-        this.laserTurretRecoilRight = 6;
+        if (!this.hasLaser || this.laserCooldown > 0 || this.laserOverheated) return null;
         
-        window.soundEngine?.playLaserShot();
+        this.laserCooldown = 0.15;
+        this.laserTurretRecoilLeft = 7;
+        this.laserTurretRecoilRight = 7;
+        this.laserHeat = Math.min(100, this.laserHeat + 14);
+
+        if (this.laserHeat >= 100) {
+            this.laserOverheated = true;
+            window.soundEngine?.playWallTick();
+        } else {
+            window.soundEngine?.playLaserShot();
+        }
 
         const leftX = this.x + 8;
         const rightX = this.x + this.width - 8;
@@ -231,8 +229,9 @@ class Paddle {
         const halfW = w / 2;
         const halfH = h / 2;
 
-        // Draw main wooden/metallic sketched paddle body
-        const paddleFill = this.hasLaser ? '#f43f5e' : (this.hasWide ? '#3b82f6' : theme.paddleFill);
+        const paddleFill = this.hasLaser 
+            ? (this.laserOverheated ? '#991b1b' : '#f43f5e') 
+            : (this.hasWide ? '#3b82f6' : theme.paddleFill);
         const paddleStroke = theme.paddleStroke;
 
         rc.rectangle(-halfW, -halfH, w, h, {
@@ -248,7 +247,7 @@ class Paddle {
             hachureGap: 5
         });
 
-        // Center jewel / grip ornament
+        // Center grip ornament
         rc.ellipse(0, 0, 18, 10, {
             seed: this.seed + 1,
             roughness: 1.2,
@@ -258,29 +257,38 @@ class Paddle {
             fillStyle: 'solid'
         });
 
-        // Draw Laser Turrets if active
+        // Laser Turrets & Heat Gauge
         if (this.hasLaser) {
-            // Left Turret barrel
+            const turretColor = this.laserOverheated ? '#7f1d1d' : '#e11d48';
             rc.rectangle(-halfW + 4, -halfH - 10 + this.laserTurretRecoilLeft, 6, 12, {
                 seed: this.seed + 2,
                 roughness: 1.2,
-                stroke: '#e11d48',
+                stroke: turretColor,
                 strokeWidth: 2,
-                fill: '#ffe4e6',
+                fill: this.laserOverheated ? '#fca5a5' : '#ffe4e6',
                 fillStyle: 'solid'
             });
-            // Right Turret barrel
             rc.rectangle(halfW - 10, -halfH - 10 + this.laserTurretRecoilRight, 6, 12, {
                 seed: this.seed + 3,
                 roughness: 1.2,
-                stroke: '#e11d48',
+                stroke: turretColor,
                 strokeWidth: 2,
-                fill: '#ffe4e6',
+                fill: this.laserOverheated ? '#fca5a5' : '#ffe4e6',
                 fillStyle: 'solid'
             });
+
+            // Hand-drawn heat bar
+            if (this.laserHeat > 0) {
+                const heatWidth = (w * 0.7) * (this.laserHeat / 100);
+                rc.line(-w * 0.35, halfH + 4, -w * 0.35 + heatWidth, halfH + 4, {
+                    seed: this.seed + 6,
+                    stroke: this.laserOverheated ? '#ef4444' : '#fbbf24',
+                    strokeWidth: 3
+                });
+            }
         }
 
-        // Draw Wide Paddle Wing connectors if active
+        // Wide Paddle Wings
         if (this.hasWide) {
             rc.line(-halfW, 0, -halfW + 14, 0, {
                 seed: this.seed + 4,
@@ -306,34 +314,29 @@ class Ball {
         this.prevX = x;
         this.prevY = y;
         
-        // Speed parameters & bounds
         this.baseSpeed = 7.5;
         this.minSpeed = 6.8;
-        this.maxSpeed = 15.0;
+        this.maxSpeed = 15.5;
         this.speed = this.baseSpeed;
-        this.minVy = 2.2; // Vertical velocity floor to prevent horizontal lock
+        this.minVy = 2.2;
         
-        // Angular spin momentum (English)
         this.spin = 0;
         this.spinDecay = 0.985;
 
-        // Kinematic squash & stretch
         this.scaleX = 1.0;
         this.scaleY = 1.0;
         this.springVelX = 0;
         this.springVelY = 0;
 
-        // If initial velocity is 0, ball is resting on paddle
         this.isStuck = vx === 0 && vy === 0;
         this.vx = vx;
         this.vy = vy;
 
         this.trail = [];
-        this.maxTrail = 7;
+        this.maxTrail = 8;
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
-        // Powerup states
         this.isFireball = false;
         this.fireballTimer = 0;
         this.isAlive = true;
@@ -354,13 +357,12 @@ class Ball {
     }
 
     triggerImpactSquash(impactNormalX, impactNormalY) {
-        // Squash orthogonally to impact surface
         if (Math.abs(impactNormalY) > Math.abs(impactNormalX)) {
-            this.scaleY = 0.55;
-            this.scaleX = 1.35;
+            this.scaleY = 0.52;
+            this.scaleX = 1.38;
         } else {
-            this.scaleX = 0.55;
-            this.scaleY = 1.35;
+            this.scaleX = 0.52;
+            this.scaleY = 1.38;
         }
         this.springVelX = 0;
         this.springVelY = 0;
@@ -369,7 +371,6 @@ class Ball {
     enforceVelocityBounds() {
         if (this.isStuck) return;
 
-        // 1. Clamp total speed
         let currentSpeed = Math.hypot(this.vx, this.vy);
         if (currentSpeed < this.minSpeed) {
             this.vx = (this.vx / currentSpeed) * this.minSpeed;
@@ -382,7 +383,6 @@ class Ball {
         }
         this.speed = currentSpeed;
 
-        // 2. Minimum Vertical Velocity Guard (|vy| >= minVy)
         if (Math.abs(this.vy) < this.minVy) {
             const signY = this.vy >= 0 ? 1 : -1;
             this.vy = signY * this.minVy;
@@ -391,23 +391,18 @@ class Ball {
         }
     }
 
-    /**
-     * Sub-step physics update
-     */
     physicsStep(subDt, canvasWidth, canvasHeight) {
         if (this.isStuck) return;
 
         this.prevX = this.x;
         this.prevY = this.y;
 
-        // Apply spin curve (Magnus effect)
         this.x += this.vx * subDt * 60 + (this.spin * 0.25);
         this.y += this.vy * subDt * 60;
 
         this.spin *= this.spinDecay;
 
-        // Boundary Collisions with penetration separation
-        // Left Wall
+        // Boundaries
         if (this.x - this.radius <= 0) {
             this.x = this.radius;
             this.vx = Math.abs(this.vx);
@@ -415,7 +410,6 @@ class Ball {
             window.soundEngine?.playWallTick();
             window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 4);
         }
-        // Right Wall
         if (this.x + this.radius >= canvasWidth) {
             this.x = canvasWidth - this.radius;
             this.vx = -Math.abs(this.vx);
@@ -423,7 +417,6 @@ class Ball {
             window.soundEngine?.playWallTick();
             window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 4);
         }
-        // Top Ceiling
         if (this.y - this.radius <= 0) {
             this.y = this.radius;
             this.vy = Math.abs(this.vy);
@@ -434,7 +427,6 @@ class Ball {
 
         this.enforceVelocityBounds();
 
-        // Out of bottom bounds
         if (this.y - this.radius > canvasHeight + 25) {
             this.isAlive = false;
         }
@@ -442,7 +434,6 @@ class Ball {
 
     update(dt, canvasWidth, canvasHeight, paddle) {
         if (this.isStuck) {
-            // Ball rests atop the paddle center
             this.x = paddle.x + paddle.width / 2;
             this.y = paddle.y - this.radius - 2;
             this.prevX = this.x;
@@ -451,26 +442,17 @@ class Ball {
             return;
         }
 
-        // Record flight trail
         this.trail.unshift({ x: this.x, y: this.y, alpha: 1.0, speed: this.speed });
-        if (this.trail.length > this.maxTrail) {
-            this.trail.pop();
-        }
+        if (this.trail.length > this.maxTrail) this.trail.pop();
 
-        // Fireball timer
         if (this.isFireball) {
             this.fireballTimer -= dt;
-            if (this.fireballTimer <= 0) {
-                this.isFireball = false;
-            }
+            if (this.fireballTimer <= 0) this.isFireball = false;
         }
 
-        // Spring physics for squash & stretch deformation
         const k = 0.28;
         const damping = 0.70;
-        
-        // High speed natural aerodynamic elongation
-        const speedStretch = Math.min(1.25, 1.0 + (this.speed - this.baseSpeed) * 0.025);
+        const speedStretch = Math.min(1.30, 1.0 + (this.speed - this.baseSpeed) * 0.028);
         const targetSx = 1.0 / speedStretch;
         const targetSy = speedStretch;
 
@@ -482,7 +464,6 @@ class Ball {
         this.springVelY = (this.springVelY + forceY) * damping;
         this.scaleY += this.springVelY;
 
-        // Boiling seed cycle
         this.seedTimer += dt;
         if (this.seedTimer > 0.06) {
             this.seedTimer = 0;
@@ -493,7 +474,7 @@ class Ball {
     draw(ctx, rc, theme) {
         ctx.save();
 
-        // 1. Draw sketchy motion ghost trails
+        // Motion Trails
         for (let i = 0; i < this.trail.length; i++) {
             const t = this.trail[i];
             const trailAlpha = (1 - i / this.trail.length) * 0.45;
@@ -505,17 +486,16 @@ class Ball {
             ctx.fill();
         }
 
-        // 2. Draw Ball Sphere with flight squash & stretch rotation
         const flightAngle = Math.atan2(this.vy, this.vx) + Math.PI / 2;
-
         ctx.translate(this.x, this.y);
         ctx.rotate(flightAngle);
         ctx.scale(this.scaleX, this.scaleY);
 
         const ballColor = this.isFireball ? '#f97316' : theme.ballFill;
         const ballStroke = this.isFireball ? '#ef4444' : theme.ballStroke;
+        const ballRadius = this.isFireball ? this.radius * 1.3 : this.radius;
 
-        rc.circle(0, 0, this.radius * 2, {
+        rc.circle(0, 0, ballRadius * 2, {
             seed: this.seed,
             roughness: 1.3,
             bowing: 1.6,
@@ -526,16 +506,18 @@ class Ball {
             fillWeight: 2
         });
 
-        // Highlight shine dot
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(-this.radius * 0.35, -this.radius * 0.35, this.radius * 0.32, 0, Math.PI * 2);
+        ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.32, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
     }
 }
 
+/**
+ * Brick Damage States & Material Physics Engine
+ */
 class Brick {
     constructor(x, y, width, height, typeKey) {
         this.x = x;
@@ -553,18 +535,17 @@ class Brick {
         this.dropsPowerup = !!this.config.dropsPowerup;
         this.unbreakable = !!this.config.unbreakable;
 
+        // Damage State: INTACT (100%), DAMAGED (75%), CRACKED (50%), FRACTURED (25%), DESTROYED (0%)
+        this.damageState = 'INTACT';
         this.hitFlashTimer = 0;
         this.seed = Math.floor(Math.random() * 1000);
         this.crackLines = [];
+        this.armorPlates = this.typeKey === 'AMETHYST' ? 4 : 0;
     }
 
-    /**
-     * Precision Swept Circle vs Box Collision with Contact Normal
-     */
     testCollision(ball) {
         if (!this.isAlive) return null;
 
-        // Find closest point on brick rectangle to ball center
         const closestX = Math.max(this.x, Math.min(ball.x, this.x + this.width));
         const closestY = Math.max(this.y, Math.min(ball.y, this.y + this.height));
 
@@ -581,7 +562,6 @@ class Brick {
                 normalX = dx / dist;
                 normalY = dy / dist;
             } else {
-                // Ball center is inside the brick: determine shortest exit normal
                 const overlapLeft = ball.x - this.x;
                 const overlapRight = (this.x + this.width) - ball.x;
                 const overlapTop = ball.y - this.y;
@@ -594,7 +574,6 @@ class Brick {
                 else { normalX = 1; normalY = 0; }
             }
 
-            // Penetration depth separation
             const penetration = ball.radius - dist;
             const sepX = normalX * (penetration + 0.5);
             const sepY = normalY * (penetration + 0.5);
@@ -609,7 +588,6 @@ class Brick {
                 contactY: closestY
             };
         }
-
         return null;
     }
 
@@ -620,24 +598,35 @@ class Brick {
         }
 
         this.hp -= dmg;
-        this.hitFlashTimer = 0.15;
+        this.hitFlashTimer = 0.16;
 
-        // Generate hand-drawn crack lines on damage
+        // Update Damage State
+        const ratio = this.hp / this.maxHp;
+        if (ratio >= 0.75) this.damageState = 'DAMAGED';
+        else if (ratio >= 0.50) this.damageState = 'CRACKED';
+        else if (ratio > 0) this.damageState = 'FRACTURED';
+        else this.damageState = 'DESTROYED';
+
+        if (this.typeKey === 'AMETHYST') {
+            this.armorPlates = Math.max(0, this.hp);
+        }
+
+        // Generate procedural crack lines based on damage state
         if (this.hp > 0 && this.hp < this.maxHp) {
-            const crackCount = (this.maxHp - this.hp) * 2;
+            const crackCount = (this.maxHp - this.hp) * 3;
             this.crackLines = [];
             for (let i = 0; i < crackCount; i++) {
                 const sx = this.x + Math.random() * this.width;
                 const sy = this.y + Math.random() * this.height;
-                const ex = sx + (Math.random() - 0.5) * (this.width * 0.6);
-                const ey = sy + (Math.random() - 0.5) * (this.height * 0.6);
+                const ex = sx + (Math.random() - 0.5) * (this.width * 0.7);
+                const ey = sy + (Math.random() - 0.5) * (this.height * 0.7);
                 this.crackLines.push({ sx, sy, ex, ey });
             }
         }
 
         if (this.hp <= 0) {
             this.isAlive = false;
-            return true; // Destroyed
+            return true;
         }
         return false;
     }
@@ -653,20 +642,26 @@ class Brick {
 
         ctx.save();
         const isFlashing = this.hitFlashTimer > 0;
-        const color = isFlashing ? '#ffffff' : this.config.color;
-        const strokeColor = isFlashing ? '#ffffff' : this.config.strokeColor;
-        const fillStyle = this.config.fillStyle;
+        let color = isFlashing ? '#ffffff' : this.config.color;
+        let strokeColor = isFlashing ? '#ffffff' : this.config.strokeColor;
+        let fillStyle = this.config.fillStyle;
 
-        // Golden brick extra shimmer
+        // Shading modifications based on damage state
+        if (this.damageState === 'CRACKED') {
+            fillStyle = 'cross-hatch';
+        } else if (this.damageState === 'FRACTURED') {
+            fillStyle = 'zigzag';
+        }
+
         let customSeed = this.seed;
         if (this.typeKey === 'GOLD') {
             customSeed = (this.seed + Math.floor(Date.now() / 150)) % 1000;
         }
 
-        // Draw rough hand-drawn brick
+        // Draw Brick Body
         rc.rectangle(this.x, this.y, this.width, this.height, {
             seed: customSeed,
-            roughness: 1.5,
+            roughness: this.damageState === 'FRACTURED' ? 2.2 : 1.5,
             bowing: 1.8,
             stroke: strokeColor,
             strokeWidth: 2,
@@ -677,20 +672,33 @@ class Brick {
             hachureGap: 4
         });
 
-        // Draw crack lines if damaged
-        if (this.crackLines.length > 0) {
-            ctx.strokeStyle = theme.inkColor;
-            ctx.lineWidth = 1.8;
-            for (const crack of this.crackLines) {
-                rc.line(crack.sx, crack.sy, crack.ex, crack.ey, {
-                    seed: customSeed + 20,
-                    stroke: theme.inkColor,
-                    strokeWidth: 1.6
+        // Amethyst Armored Plates Visual
+        if (this.typeKey === 'AMETHYST' && this.armorPlates > 0) {
+            for (let p = 0; p < this.armorPlates; p++) {
+                const px = this.x + 4 + p * (this.width / 4 - 2);
+                rc.rectangle(px, this.y + 3, this.width / 4 - 4, this.height - 6, {
+                    seed: customSeed + p * 10,
+                    roughness: 1.2,
+                    stroke: '#581c87',
+                    strokeWidth: 1.5,
+                    fill: '#c084fc',
+                    fillStyle: 'solid'
                 });
             }
         }
 
-        // Draw symbol / icon inside special bricks
+        // Procedural Crack Overlays
+        if (this.crackLines.length > 0) {
+            for (const crack of this.crackLines) {
+                rc.line(crack.sx, crack.sy, crack.ex, crack.ey, {
+                    seed: customSeed + 20,
+                    stroke: theme.inkColor,
+                    strokeWidth: 1.8
+                });
+            }
+        }
+
+        // Distinct Material Icons
         if (this.typeKey === 'GOLD') {
             ctx.fillStyle = '#b45309';
             ctx.font = 'bold 12px Fredoka, sans-serif';
@@ -709,6 +717,12 @@ class Brick {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('◆', this.x + this.width / 2, this.y + this.height / 2 + 1);
+        } else if (this.typeKey === 'AMBER' && this.damageState !== 'INTACT') {
+            ctx.fillStyle = '#78350f';
+            ctx.font = 'bold 10px Fredoka, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⚡', this.x + this.width / 2, this.y + this.height / 2 + 1);
         }
 
         ctx.restore();
@@ -763,7 +777,6 @@ class PowerupCapsule {
         const types = ['multiball', 'wide', 'laser', 'fireball', 'shield', 'slowmo'];
         this.type = type || types[Math.floor(Math.random() * types.length)];
 
-        // Visual configs
         const configs = {
             multiball: { name: '3x Multiball', icon: '⚡', color: '#f59e0b', stroke: '#b45309' },
             wide: { name: 'Wide Paddle', icon: '🛡️', color: '#3b82f6', stroke: '#1d4ed8' },
@@ -789,7 +802,6 @@ class PowerupCapsule {
         if (!this.isAlive) return;
         ctx.save();
         
-        // Sketchy rounded capsule
         rc.ellipse(this.x, this.y, this.width, this.height, {
             seed: this.seed,
             roughness: 1.3,
@@ -799,7 +811,6 @@ class PowerupCapsule {
             fillStyle: 'solid'
         });
 
-        // Center Icon
         ctx.font = '12px Fredoka, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -838,7 +849,6 @@ class SafetyNet {
 
     update(dt) {
         if (!this.isActive) return;
-        // Spring bounce physics
         const k = 0.2;
         const damping = 0.8;
         const force = -this.springY * k;
@@ -859,7 +869,6 @@ class SafetyNet {
             strokeWidth: 4
         });
 
-        // Bouncy criss-cross netting
         for (let x = 20; x < this.canvasWidth; x += 40) {
             rc.line(x - 10, curY + 6, x + 10, curY - 6, {
                 seed: this.seed + x,
