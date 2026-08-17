@@ -454,8 +454,9 @@ class Game {
         document.getElementById('btnTheme')?.addEventListener('click', () => this.cycleTheme());
         document.getElementById('btnMute')?.addEventListener('click', () => this.toggleMute());
 
-        // Notebook Collection Modal
+        // Notebook Collection Modal & Dev Tools
         document.getElementById('btnCollection')?.addEventListener('click', () => this.openSketchbookModal('chapters'));
+        document.getElementById('btnDevTools')?.addEventListener('click', () => this.toggleDebugConsole());
         document.getElementById('btnCloseCollection')?.addEventListener('click', () => {
             document.getElementById('modalCollection')?.classList.add('hidden');
         });
@@ -1196,6 +1197,13 @@ class Game {
         const grid = document.getElementById('collectionItemsGrid');
         if (!grid || !window.progression) return;
 
+        // Update tab buttons active state
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (activeTab === 'chapters') document.getElementById('tabChapters')?.classList.add('active');
+        if (activeTab === 'archive') document.getElementById('tabArchive')?.classList.add('active');
+        if (activeTab === 'achievements') document.getElementById('tabAchievements')?.classList.add('active');
+        if (activeTab === 'cosmetics') document.getElementById('tabCosmetics')?.classList.add('active');
+
         grid.innerHTML = '';
         const pData = window.progression.data;
 
@@ -1209,17 +1217,27 @@ class Game {
                     this.startGame(i);
                 };
 
+                const canvas = document.createElement('canvas');
+                canvas.width = 110;
+                canvas.height = 65;
+                canvas.className = 'item-sketch-canvas';
+
                 let starStr = '';
                 for (let s = 0; s < 3; s++) starStr += s < stats.stars ? '★' : '☆';
 
-                card.innerHTML = `
-                    <div class="collection-icon">📖</div>
+                card.appendChild(canvas);
+                const textContainer = document.createElement('div');
+                textContainer.innerHTML = `
                     <div class="collection-title">${lvl.name}</div>
-                    <div class="star-rating" style="color: #fbbf24; font-size: 1.1rem; margin: 4px 0;">${starStr}</div>
-                    <div class="collection-desc">Best: ${stats.bestScore.toLocaleString()}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 6px;">Draft Page</button>
+                    <div class="star-rating" style="color: #fbbf24; font-size: 1.15rem; margin: 4px 0;">${starStr}</div>
+                    <div class="collection-desc">${lvl.starConditions?.masteryDesc || lvl.subtitle}</div>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px;">Draft Sector</button>
                 `;
+                card.appendChild(textContainer);
                 grid.appendChild(card);
+
+                // Draw sector icon
+                SketchItemRenderer.drawItemIllustration(canvas, 'bosses', i === 2 ? 'eraser' : (i === 3 ? 'ink' : (i === 4 ? 'pencil' : 'emerald')), true);
             }
         } else if (activeTab === 'archive') {
             const defs = window.progression.archiveDefinitions;
@@ -1228,12 +1246,22 @@ class Game {
                     const isDiscovered = pData.discoveredItems[cat]?.includes(item.id);
                     const card = document.createElement('div');
                     card.className = `collection-card ${isDiscovered ? '' : 'locked'}`;
-                    card.innerHTML = `
-                        <div class="collection-icon">${isDiscovered ? item.icon : '❓'}</div>
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 110;
+                    canvas.height = 65;
+                    canvas.className = 'item-sketch-canvas';
+                    card.appendChild(canvas);
+
+                    const textContainer = document.createElement('div');
+                    textContainer.innerHTML = `
                         <div class="collection-title">${isDiscovered ? item.name : '???'}</div>
-                        <div class="collection-desc">${isDiscovered ? item.desc : 'Uncharted sketch object.'}</div>
+                        <div class="collection-desc">${isDiscovered ? item.desc : 'Break crystals or play sectors to discover.'}</div>
                     `;
+                    card.appendChild(textContainer);
                     grid.appendChild(card);
+
+                    SketchItemRenderer.drawItemIllustration(canvas, cat, item.id, isDiscovered);
                 }
             }
         } else if (activeTab === 'achievements') {
@@ -1241,27 +1269,46 @@ class Game {
                 const completed = pData.completedAchievements.includes(ach.id);
                 const card = document.createElement('div');
                 card.className = `collection-card ${completed ? 'equipped' : 'locked'}`;
-                card.innerHTML = `
-                    <div class="collection-icon">${ach.badge}</div>
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 110;
+                canvas.height = 65;
+                canvas.className = 'item-sketch-canvas';
+                card.appendChild(canvas);
+
+                const textContainer = document.createElement('div');
+                textContainer.innerHTML = `
                     <div class="collection-title">${ach.name}</div>
                     <div class="collection-desc">${ach.desc}</div>
-                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981;">+${ach.inkReward} 🖋️ &bull; +${ach.xpReward} XP</div>
+                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981; font-weight: bold;">${completed ? '🏅 COMPLETED' : `+${ach.inkReward} 🖋️ &bull; +${ach.xpReward} XP`}</div>
                 `;
+                card.appendChild(textContainer);
                 grid.appendChild(card);
+
+                SketchItemRenderer.drawItemIllustration(canvas, 'achievements', ach.id, completed);
             }
         } else if (activeTab === 'cosmetics') {
-            // Paddle Skins
+            // 1. Paddle Skins
             for (const skin of window.progression.skins) {
                 const unlocked = pData.unlockedSkins.includes(skin.id);
                 const equipped = pData.player.selectedSkin === skin.id;
                 const card = document.createElement('div');
                 card.className = `collection-card ${equipped ? 'equipped' : ''}`;
-                card.innerHTML = `
-                    <div class="collection-icon">${skin.icon}</div>
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 110;
+                canvas.height = 65;
+                canvas.className = 'item-sketch-canvas';
+                card.appendChild(canvas);
+
+                const textContainer = document.createElement('div');
+                textContainer.innerHTML = `
                     <div class="collection-title">${skin.name}</div>
                     <div class="collection-desc">${skin.desc}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 6px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} 🖋️)`)}</button>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} 🖋️)`)}</button>
                 `;
+                card.appendChild(textContainer);
+
                 card.onclick = () => {
                     if (unlocked) {
                         window.progression.selectSkin(skin.id);
@@ -1274,6 +1321,43 @@ class Game {
                     }
                 };
                 grid.appendChild(card);
+                SketchItemRenderer.drawItemIllustration(canvas, 'skins', skin.id, unlocked);
+            }
+
+            // 2. Ball Trails
+            for (const trail of window.progression.trails) {
+                const unlocked = pData.unlockedTrails.includes(trail.id);
+                const equipped = pData.player.selectedTrail === trail.id;
+                const card = document.createElement('div');
+                card.className = `collection-card ${equipped ? 'equipped' : ''}`;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 110;
+                canvas.height = 65;
+                canvas.className = 'item-sketch-canvas';
+                card.appendChild(canvas);
+
+                const textContainer = document.createElement('div');
+                textContainer.innerHTML = `
+                    <div class="collection-title">${trail.name}</div>
+                    <div class="collection-desc">${trail.desc}</div>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} 🖋️)`)}</button>
+                `;
+                card.appendChild(textContainer);
+
+                card.onclick = () => {
+                    if (unlocked) {
+                        window.progression.selectTrail(trail.id);
+                        this.renderSketchbookTabs('cosmetics');
+                    } else {
+                        if (window.progression.unlockTrailWithInk(trail.id)) {
+                            this.renderSketchbookTabs('cosmetics');
+                            window.soundEngine?.playPowerupCollect('multiball');
+                        }
+                    }
+                };
+                grid.appendChild(card);
+                SketchItemRenderer.drawItemIllustration(canvas, 'trails', trail.id, unlocked);
             }
         }
     }
@@ -1285,16 +1369,23 @@ class Game {
             debugPanel.id = 'sketchoidDebugPanel';
             debugPanel.className = 'debug-panel';
             debugPanel.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 6px;">🛠️ SKETCHOID DEV TOOLS</div>
+                <div style="font-weight: bold; margin-bottom: 6px; color: #fbbf24;">🛠️ SKETCHOID DEV TOOLS</div>
+                <button id="dbgUnlockAll" class="btn-sketch btn-small" style="background: #10b981; color: #fff; font-weight: bold;">🔓 UNLOCK EVERYTHING (DEV)</button>
                 <button id="dbgSkipLevel" class="btn-sketch btn-small">⏩ Skip Level</button>
                 <button id="dbgAddInk" class="btn-sketch btn-small">+500 🖋️ Ink</button>
                 <button id="dbgAddXp" class="btn-sketch btn-small">+1000 XP</button>
                 <button id="dbgMultiball" class="btn-sketch btn-small">⚡ Multiball</button>
                 <button id="dbgLaser" class="btn-sketch btn-small">🔫 Lasers</button>
                 <button id="dbgKillBoss" class="btn-sketch btn-small">💀 Kill Boss</button>
+                <button id="dbgResetSave" class="btn-sketch btn-small" style="color: #f43f5e;">🔄 Reset Save</button>
             `;
             document.body.appendChild(debugPanel);
 
+            document.getElementById('dbgUnlockAll')?.addEventListener('click', () => {
+                window.progression?.unlockAllDevMode();
+                this.updateHUD();
+                this.renderSketchbookTabs('chapters');
+            });
             document.getElementById('dbgSkipLevel')?.addEventListener('click', () => this.nextLevel());
             document.getElementById('dbgAddInk')?.addEventListener('click', () => {
                 window.progression?.addInk(500);
@@ -1308,6 +1399,11 @@ class Game {
             document.getElementById('dbgLaser')?.addEventListener('click', () => this.applyPowerup('laser'));
             document.getElementById('dbgKillBoss')?.addEventListener('click', () => {
                 if (this.boss && this.boss.isAlive) this.boss.takeDamage(100);
+            });
+            document.getElementById('dbgResetSave')?.addEventListener('click', () => {
+                window.progression?.resetDevMode();
+                this.updateHUD();
+                this.renderSketchbookTabs('chapters');
             });
         } else {
             debugPanel.style.display = debugPanel.style.display === 'none' ? 'flex' : 'none';

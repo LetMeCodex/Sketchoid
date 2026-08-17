@@ -503,6 +503,13 @@ canvas {
     cursor: not-allowed;
 }
 
+.item-sketch-canvas {
+    width: 100px;
+    height: 58px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+}
+
 .collection-icon {
     font-size: 1.6rem;
     margin-bottom: 4px;

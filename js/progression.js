@@ -293,6 +293,42 @@ class ProgressionManager {
         }
         return false;
     }
+
+    unlockAllDevMode() {
+        this.data.player.level = 10;
+        this.data.player.xp = 0;
+        this.data.player.ink = 9999;
+        this.data.unlockedSkins = ['classic', 'ruler', 'quill', 'gold'];
+        this.data.unlockedTrails = ['charcoal', 'rainbow', 'nebula', 'neon'];
+        this.data.unlockedThemes = ['blueprint', 'parchment', 'neon'];
+        this.data.discoveredItems = {
+            crystals: ['emerald', 'amber', 'sapphire', 'ruby', 'amethyst', 'gold', 'obsidian'],
+            powerups: ['multiball', 'wide', 'laser', 'fireball', 'shield', 'slowmo'],
+            bosses: ['eraser', 'ink', 'pencil']
+        };
+        this.data.completedAchievements = this.achievements.map(a => a.id);
+        
+        // Award 3 Stars to all levels
+        this.data.levelStars = {
+            '1_1': { stars: 3, bestScore: 9800, bestStyle: 1200, bestCombo: 18 },
+            '2_1': { stars: 3, bestScore: 11400, bestStyle: 1600, bestCombo: 22 },
+            '3_1': { stars: 3, bestScore: 14200, bestStyle: 2100, bestCombo: 25 },
+            '4_1': { stars: 3, bestScore: 16800, bestStyle: 2400, bestCombo: 28 },
+            '5_1': { stars: 3, bestScore: 22500, bestStyle: 3500, bestCombo: 35 }
+        };
+        this.calculateTotalStars();
+        this.save();
+        window.soundEngine?.playLevelClear();
+        window.haptics?.success();
+        window.particleSystem?.addFloatingText('🔓 DEV MODE: EVERYTHING UNLOCKED! (9999 🖋️)', 400, 200, '#fbbf24', 2.0, true);
+    }
+
+    resetDevMode() {
+        this.data = this.getDefaultSaveData();
+        this.save();
+        window.soundEngine?.playWallTick();
+        window.particleSystem?.addFloatingText('🔄 SAVE DATA RESET TO DEFAULT', 400, 200, '#ef4444', 1.8, true);
+    }
 }
 
 window.ProgressionManager = ProgressionManager;
