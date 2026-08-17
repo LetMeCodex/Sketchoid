@@ -336,24 +336,20 @@ h1 {
 .canvas-wrapper {
     position: relative;
     width: 100%;
-    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 0;
 }
 
 #gameCanvas {
     display: block;
-    width: auto;
-    height: 100%;
-    max-height: 100%;
-    max-width: 100%;
+    width: 100%;
+    max-width: min(calc((100vh - 90px) * (800 / 640)), 1100px);
+    height: auto;
     aspect-ratio: 800 / 640;
-    object-fit: contain;
     background-color: var(--canvas-bg);
     border: 3px solid var(--border-sketch);
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: 4px 6px 0px var(--shadow-color);
 }
 
@@ -369,6 +365,7 @@ h1 {
 /* Mobile Touch Bar */
 .mobile-touch-bar {
     width: 100%;
+    max-width: min(calc((100vh - 90px) * (800 / 640)), 1100px);
     margin-top: 4px;
     padding: 6px;
     text-align: center;
@@ -1138,7 +1135,7 @@ h1 {
     /* Game Container & Canvas Responsive Full-Screen */
     .game-container {
         width: 100%;
-        flex: 1;
+        max-width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1155,17 +1152,18 @@ h1 {
 
     #gameCanvas {
         width: 100% !important;
-        max-height: calc(100dvh - 128px) !important;
-        aspect-ratio: 800 / 640;
-        object-fit: contain;
-        border: 2px solid var(--border-sketch);
-        border-radius: 8px;
-        box-shadow: 2px 3px 0px var(--shadow-color);
+        max-width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 800 / 640 !important;
+        border: 2.5px solid var(--border-sketch) !important;
+        border-radius: 8px !important;
+        box-shadow: 2px 3px 0px var(--shadow-color) !important;
         touch-action: none;
     }
 
     .mobile-touch-bar {
         width: 100%;
+        max-width: 100%;
         margin-top: 4px;
         padding: 5px;
         font-size: 0.70rem;
