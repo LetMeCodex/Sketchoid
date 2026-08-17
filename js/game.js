@@ -295,7 +295,7 @@ class Game {
                     const comboText = styleCallout ? `${styleCallout} +${earnedPts}` : (this.comboMultiplier > 1 ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`);
                     window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, styleCallout ? 1.25 : 1.0, !!styleCallout);
 
-                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
+                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups && this.powerups.length < 3) {
                         window.soundEngine?.playPowerupSpawn();
                         this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                     }
@@ -854,21 +854,26 @@ class Game {
         window.particleSystem?.addFloatingText(pNames[type] || 'POWERUP!', this.paddle.x + this.paddle.width / 2, this.paddle.y - 30, pColors[type] || '#ffffff', 1.3, true);
 
         if (type === 'multiball') {
-            const newBalls = [];
-            for (const ball of this.balls) {
-                if (!ball.isStuck) {
-                    const angle1 = Math.atan2(ball.vy, ball.vx) + 0.32;
-                    const angle2 = Math.atan2(ball.vy, ball.vx) - 0.32;
-                    const b1 = new Ball(ball.x, ball.y, Math.cos(angle1) * ball.speed, Math.sin(angle1) * ball.speed);
-                    const b2 = new Ball(ball.x, ball.y, Math.cos(angle2) * ball.speed, Math.sin(angle2) * ball.speed);
-                    if (ball.isFireball) {
-                        b1.setFireball(ball.fireballTimer);
-                        b2.setFireball(ball.fireballTimer);
+            const MAX_BALLS = 8;
+            if (this.balls.length < MAX_BALLS) {
+                const leadBall = this.balls.find(b => !b.isStuck) || this.balls[0];
+                if (leadBall) {
+                    const angle1 = Math.atan2(leadBall.vy, leadBall.vx) + 0.35;
+                    const angle2 = Math.atan2(leadBall.vy, leadBall.vx) - 0.35;
+                    const b1 = new Ball(leadBall.x, leadBall.y, Math.cos(angle1) * leadBall.speed, Math.sin(angle1) * leadBall.speed);
+                    const b2 = new Ball(leadBall.x, leadBall.y, Math.cos(angle2) * leadBall.speed, Math.sin(angle2) * leadBall.speed);
+                    if (leadBall.isFireball) {
+                        b1.setFireball(leadBall.fireballTimer);
+                        b2.setFireball(leadBall.fireballTimer);
                     }
-                    newBalls.push(b1, b2);
+                    this.balls.push(b1);
+                    if (this.balls.length < MAX_BALLS) {
+                        this.balls.push(b2);
+                    }
                 }
+            } else {
+                this.addScore(500);
             }
-            this.balls.push(...newBalls);
         } else if (type === 'wide') {
             this.paddle.hasWide = true;
             this.paddle.wideTimer = 14;
@@ -916,7 +921,7 @@ class Game {
                             window.particleSystem?.createLaserSparks(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 3);
                         }
 
-                        if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
+                        if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups && this.powerups.length < 3) {
                             this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                         }
                     }

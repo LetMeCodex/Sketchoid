@@ -533,16 +533,17 @@ class Ball {
         const ballStroke = this.isFireball ? '#ef4444' : theme.ballStroke;
         const ballRadius = this.isFireball ? this.radius * 1.3 : this.radius;
 
-        rc.circle(0, 0, ballRadius * 2, {
-            seed: this.seed,
-            roughness: 1.2,
-            bowing: 1.4,
-            stroke: ballStroke,
-            strokeWidth: 2,
-            fill: ballColor,
-            fillStyle: 'solid'
-        });
+        // Ultra-fast 2D Canvas rendering with hand-drawn stylized borders
+        ctx.fillStyle = ballColor;
+        ctx.strokeStyle = ballStroke;
+        ctx.lineWidth = 2.2;
 
+        ctx.beginPath();
+        ctx.arc(0, 0, ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Subtle specular glint
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.30, 0, Math.PI * 2);
