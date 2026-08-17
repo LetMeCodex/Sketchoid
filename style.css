@@ -320,7 +320,7 @@ h1 {
     justify-content: center;
 }
 
-canvas {
+#gameCanvas {
     display: block;
     width: 100%;
     max-width: 800px;
@@ -329,6 +329,15 @@ canvas {
     border: 3px solid var(--border-sketch);
     border-radius: 12px;
     box-shadow: 4px 6px 0px var(--shadow-color);
+}
+
+.rough-switch-canvas,
+.logo-canvas,
+.item-sketch-canvas,
+.modal-diorama-canvas {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 
 /* Mobile Touch Bar */
