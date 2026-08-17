@@ -71,7 +71,7 @@ class Game {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
 
-        this.currentThemeKey = 'blueprint';
+        this.currentThemeKey = 'parchment';
         this.theme = THEMES[this.currentThemeKey];
 
         // Decoupled Core Systems
