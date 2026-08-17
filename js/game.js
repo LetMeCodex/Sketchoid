@@ -1,6 +1,6 @@
 /**
- * SKETCHOID Main Game Engine & Controller
- * Rough.js hand-drawn rendering loop, physics, collisions, combo streaks & UI
+ * SKETCHOID Main Game Engine & Controller (Phase 2.1 Overhaul)
+ * Deterministic Sub-Stepping, Swept CCD Physics, and Dynamic Aim Visualizer
  */
 
 const THEMES = {
@@ -117,8 +117,10 @@ class Game {
         this.borderSeed = 42;
         this.borderSeedTimer = 0;
 
-        // Frame timing
+        // Frame timing & fixed sub-stepping accumulator
         this.lastTime = performance.now();
+        this.physicsAccumulator = 0;
+        this.fixedTimeStep = 1 / 120; // 120Hz physics sub-step rate
 
         // Initial preview load
         this.loadLevel(0);
@@ -191,7 +193,7 @@ class Game {
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 0) { // Left click
+            if (e.button === 0) {
                 this.handleActionTrigger();
             }
         });
@@ -285,12 +287,13 @@ class Game {
         }
 
         if (this.state === 'PLAYING') {
-            // Launch stuck balls
+            // Launch stuck balls with paddle momentum
             let launchedAny = false;
             for (const ball of this.balls) {
                 if (ball.isStuck) {
-                    const launchAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.4;
-                    ball.launch(launchAngle);
+                    const aimAngle = -Math.PI / 2 + (this.paddle.swingVelocity * 0.04);
+                    const clampedAngle = Math.max(-Math.PI * 0.85, Math.min(-Math.PI * 0.15, aimAngle));
+                    ball.launch(clampedAngle);
                     window.soundEngine?.playPaddleBoing(0.3);
                     launchedAny = true;
                 }
@@ -638,7 +641,7 @@ class Game {
             // 2. Update Safety Net
             this.safetyNet.update(effectiveDt);
 
-            // 3. Update Bricks
+            // 3. Update Bricks Animation Timers
             for (const brick of this.bricks) {
                 brick.update(effectiveDt);
             }
@@ -703,128 +706,127 @@ class Game {
                 }
             }
 
-            // 6. Update Balls & Collisions
+            // 6. Sub-Stepped Continuous Physics Solver (4 sub-ticks per frame)
+            const subSteps = 4;
+            const subDt = effectiveDt / subSteps;
+
+            for (let s = 0; s < subSteps; s++) {
+                for (let i = this.balls.length - 1; i >= 0; i--) {
+                    const ball = this.balls[i];
+                    if (ball.isStuck) continue;
+
+                    // Ball physics step (wall boundaries & spin curve)
+                    ball.physicsStep(subDt, this.width, this.height);
+
+                    // Ball vs Safety Net Trampoline
+                    if (this.safetyNet.isActive && ball.y + ball.radius >= this.safetyNet.y) {
+                        ball.y = this.safetyNet.y - ball.radius;
+                        ball.vy = -Math.abs(ball.vy);
+                        ball.enforceVelocityBounds();
+                        this.safetyNet.bounce();
+                    }
+
+                    // Ball vs Paddle Precision Deflection
+                    if (ball.vy > 0 &&
+                        ball.y + ball.radius >= this.paddle.y &&
+                        ball.y - ball.radius <= this.paddle.y + this.paddle.height &&
+                        ball.x + ball.radius >= this.paddle.x &&
+                        ball.x - ball.radius <= this.paddle.x + this.paddle.width) {
+
+                        // Calculate momentum-transferred deflection
+                        const deflection = this.paddle.calculateDeflection(ball);
+                        ball.vx = deflection.vx;
+                        ball.vy = deflection.vy;
+                        ball.spin = deflection.spin;
+                        ball.y = this.paddle.y - ball.radius - 1;
+
+                        // Elastic response
+                        ball.triggerImpactSquash(0, -1);
+                        this.paddle.triggerSquash(deflection.offset);
+                        window.soundEngine?.playPaddleBoing(Math.abs(deflection.offset));
+                        window.particleSystem?.createPaddleHitSparks(ball.x, this.paddle.y, this.paddle.swingVelocity);
+
+                        // Reset combo streak on paddle catch
+                        this.comboStreak = 0;
+                        this.comboMultiplier = 1;
+                        this.updateHUD();
+                    }
+
+                    // Ball vs Bricks Continuous Swept Collision
+                    for (const brick of this.bricks) {
+                        if (!brick.isAlive) continue;
+
+                        const hitResult = brick.testCollision(ball);
+                        if (hitResult) {
+                            if (!ball.isFireball) {
+                                // Separation penetration resolution
+                                ball.x += hitResult.sepX;
+                                ball.y += hitResult.sepY;
+
+                                // Reflect velocity vector across contact normal
+                                const dot = ball.vx * hitResult.normalX + ball.vy * hitResult.normalY;
+                                ball.vx -= 2 * dot * hitResult.normalX;
+                                ball.vy -= 2 * dot * hitResult.normalY;
+
+                                // Apply spin deflection
+                                ball.vx += ball.spin * hitResult.normalY * 0.4;
+                                ball.vy -= ball.spin * hitResult.normalX * 0.4;
+
+                                ball.triggerImpactSquash(hitResult.normalX, hitResult.normalY);
+                                ball.enforceVelocityBounds();
+                            }
+
+                            // Damage Brick
+                            const dmg = ball.isFireball ? 3 : 1;
+                            const destroyed = brick.takeDamage(dmg);
+
+                            // Combo Multiplier Streak logic
+                            this.comboStreak++;
+                            if (this.comboStreak > this.maxComboStreak) {
+                                this.maxComboStreak = this.comboStreak;
+                            }
+                            this.comboMultiplier = 1 + Math.floor(this.comboStreak / 3);
+
+                            // Pentatonic chime playback
+                            window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
+
+                            if (destroyed) {
+                                window.soundEngine?.playExplosion(brick.isExplosive);
+                                window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
+                                
+                                const earnedPts = brick.score * this.comboMultiplier;
+                                this.addScore(earnedPts);
+
+                                const isHighCombo = this.comboMultiplier > 1;
+                                const comboText = isHighCombo ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`;
+                                window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, isHighCombo ? 1.4 : 1.0, isHighCombo);
+
+                                if (brick.isExplosive) {
+                                    this.triggerRubyNuke(brick);
+                                }
+                                if (brick.dropsPowerup) {
+                                    window.soundEngine?.playPowerupSpawn();
+                                    this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
+                                }
+
+                                this.checkLevelClear();
+                            } else {
+                                window.particleSystem?.createLaserSparks(ball.x, ball.y, brick.config.color, 4);
+                            }
+
+                            this.updateHUD();
+                            break; // Handled collision for this sub-step
+                        }
+                    }
+                }
+            }
+
+            // 7. Update Balls (trails, deformation, life status)
             for (let i = this.balls.length - 1; i >= 0; i--) {
                 const ball = this.balls[i];
                 ball.update(effectiveDt, this.width, this.height, this.paddle);
-
                 if (!ball.isAlive) {
                     this.balls.splice(i, 1);
-                    continue;
-                }
-
-                // Ball vs Safety Net Trampoline
-                if (this.safetyNet.isActive && !ball.isStuck && ball.y + ball.radius >= this.safetyNet.y) {
-                    ball.y = this.safetyNet.y - ball.radius;
-                    ball.vy = -Math.abs(ball.vy);
-                    this.safetyNet.bounce();
-                }
-
-                // Ball vs Paddle Collision
-                if (!ball.isStuck && ball.vy > 0 &&
-                    ball.y + ball.radius >= this.paddle.y &&
-                    ball.y - ball.radius <= this.paddle.y + this.paddle.height &&
-                    ball.x + ball.radius >= this.paddle.x &&
-                    ball.x - ball.radius <= this.paddle.x + this.paddle.width) {
-
-                    // Calculate impact offset (-1.0 to 1.0)
-                    const paddleCenter = this.paddle.x + this.paddle.width / 2;
-                    const impactOffset = (ball.x - paddleCenter) / (this.paddle.width / 2);
-                    const clampedOffset = Math.max(-0.95, Math.min(0.95, impactOffset));
-
-                    // Launch angle with paddle velocity slice
-                    const bounceAngle = -Math.PI / 2 + clampedOffset * 1.05 + this.paddle.vx * 0.05;
-                    const clampedAngle = Math.max(-Math.PI * 0.88, Math.min(-Math.PI * 0.12, bounceAngle));
-
-                    ball.vx = Math.cos(clampedAngle) * ball.speed;
-                    ball.vy = Math.sin(clampedAngle) * ball.speed;
-                    ball.y = this.paddle.y - ball.radius - 1;
-
-                    // Elastic squash & sound
-                    this.paddle.triggerSquash(clampedOffset);
-                    window.soundEngine?.playPaddleBoing(Math.abs(clampedOffset));
-                    window.particleSystem?.createPaddleHitSparks(ball.x, this.paddle.y, this.paddle.vx);
-
-                    // Reset combo streak on paddle catch (rewards long continuous air combos!)
-                    this.comboStreak = 0;
-                    this.comboMultiplier = 1;
-                    this.updateHUD();
-                }
-
-                // Ball vs Bricks Collision
-                for (const brick of this.bricks) {
-                    if (!brick.isAlive) continue;
-
-                    // Bounding box overlap test
-                    const closestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
-                    const closestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
-                    const distX = ball.x - closestX;
-                    const distY = ball.y - closestY;
-                    const distance = Math.hypot(distX, distY);
-
-                    if (distance < ball.radius) {
-                        // Collision Occurred!
-                        if (!ball.isFireball) {
-                            // Determine bounce normal
-                            const overlapLeft = (ball.x + ball.radius) - brick.x;
-                            const overlapRight = (brick.x + brick.width) - (ball.x - ball.radius);
-                            const overlapTop = (ball.y + ball.radius) - brick.y;
-                            const overlapBottom = (brick.y + brick.height) - (ball.y - ball.radius);
-
-                            const minOverlapX = Math.min(overlapLeft, overlapRight);
-                            const minOverlapY = Math.min(overlapTop, overlapBottom);
-
-                            if (minOverlapX < minOverlapY) {
-                                ball.vx = -ball.vx;
-                                ball.x += (overlapLeft < overlapRight ? -minOverlapX : minOverlapX) * 0.5;
-                            } else {
-                                ball.vy = -ball.vy;
-                                ball.y += (overlapTop < overlapBottom ? -minOverlapY : minOverlapY) * 0.5;
-                            }
-                        }
-
-                        // Damage Brick
-                        const dmg = ball.isFireball ? 3 : 1;
-                        const destroyed = brick.takeDamage(dmg);
-
-                        // Combo Multiplier Streak logic
-                        this.comboStreak++;
-                        if (this.comboStreak > this.maxComboStreak) {
-                            this.maxComboStreak = this.comboStreak;
-                        }
-                        this.comboMultiplier = 1 + Math.floor(this.comboStreak / 3);
-
-                        // Pentatonic chime playback
-                        window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
-
-                        if (destroyed) {
-                            window.soundEngine?.playExplosion(brick.isExplosive);
-                            window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
-                            
-                            const earnedPts = brick.score * this.comboMultiplier;
-                            this.addScore(earnedPts);
-
-                            // Floating score & combo popup
-                            const isHighCombo = this.comboMultiplier > 1;
-                            const comboText = isHighCombo ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`;
-                            window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, isHighCombo ? 1.4 : 1.0, isHighCombo);
-
-                            if (brick.isExplosive) {
-                                this.triggerRubyNuke(brick);
-                            }
-                            if (brick.dropsPowerup) {
-                                window.soundEngine?.playPowerupSpawn();
-                                this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
-                            }
-
-                            this.checkLevelClear();
-                        } else {
-                            window.particleSystem?.createLaserSparks(ball.x, ball.y, brick.config.color, 4);
-                        }
-
-                        this.updateHUD();
-                        break; // Only one brick collision per sub-frame per ball
-                    }
                 }
             }
 
@@ -840,7 +842,7 @@ class Game {
             }
         }
 
-        // 7. Update Particles & VFX
+        // 8. Update Particles & VFX
         window.particleSystem?.update(dt);
     }
 
@@ -874,6 +876,39 @@ class Game {
         }
     }
 
+    /**
+     * Draw Dotted Launch Trajectory Guide
+     */
+    drawLaunchAimGuide(ctx, rc, theme) {
+        const stuckBall = this.balls.find(b => b.isStuck);
+        if (!stuckBall) return;
+
+        ctx.save();
+        const aimAngle = -Math.PI / 2 + (this.paddle.swingVelocity * 0.04);
+        const clampedAngle = Math.max(-Math.PI * 0.85, Math.min(-Math.PI * 0.15, aimAngle));
+
+        const startX = stuckBall.x;
+        const startY = stuckBall.y - stuckBall.radius;
+        const aimDist = 120;
+
+        ctx.strokeStyle = theme.borderStroke;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 6]);
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX + Math.cos(clampedAngle) * aimDist, startY + Math.sin(clampedAngle) * aimDist);
+        ctx.stroke();
+
+        // Target reticle dot at end of guide
+        ctx.fillStyle = theme.borderStroke;
+        ctx.beginPath();
+        ctx.arc(startX + Math.cos(clampedAngle) * aimDist, startY + Math.sin(clampedAngle) * aimDist, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     draw() {
         const ctx = this.ctx;
         const rc = this.rc;
@@ -895,7 +930,7 @@ class Game {
         ctx.fillStyle = theme.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // 3. Draw Sketchy Grid Pattern (Architectural Blueprint / Graph Paper)
+        // 3. Draw Sketchy Grid Pattern
         ctx.strokeStyle = theme.gridColor;
         ctx.lineWidth = 1;
         const gridSize = 24;
@@ -937,15 +972,18 @@ class Game {
             laser.draw(ctx, rc, theme);
         }
 
-        // 9. Draw Paddle
+        // 9. Draw Launch Aim Guide if ball is resting
+        this.drawLaunchAimGuide(ctx, rc, theme);
+
+        // 10. Draw Paddle
         this.paddle.draw(ctx, rc, theme);
 
-        // 10. Draw Kinetic Balls
+        // 11. Draw Kinetic Balls
         for (const ball of this.balls) {
             ball.draw(ctx, rc, theme);
         }
 
-        // 11. Draw Particle Debris, Shockwaves, and Floating Scores
+        // 12. Draw Particle Debris, Shockwaves, and Floating Scores
         window.particleSystem?.draw(ctx, rc, theme);
 
         ctx.restore();
