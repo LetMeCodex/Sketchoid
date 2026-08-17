@@ -1,0 +1,13 @@
+{
+  "appId": "com.codex.sketchoid",
+  "appName": "Sketchoid",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#f8fafc",
+    "allowMixedContent": true
+  }
+}
