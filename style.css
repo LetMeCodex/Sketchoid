@@ -9,38 +9,38 @@
     --font-mono: 'JetBrains Mono', monospace;
     --font-sketch: 'Architects Daughter', cursive, sans-serif;
     
-    /* Default Theme: Cyanotype Blueprint */
-    --bg-main: #070d1e;
-    --canvas-bg: #0b132b;
-    --text-primary: #f8fafc;
-    --text-muted: #94a3b8;
-    --border-sketch: #38bdf8;
-    --button-bg: #0284c7;
-    --button-text: #ffffff;
-    --tab-active-bg: #38bdf8;
-    --tab-active-text: #070d1e;
-    --card-bg: rgba(11, 19, 43, 0.96);
-    --sticky-bg: #1c2541;
-    --sticky-border: #38bdf8;
-    --shadow-color: rgba(0, 0, 0, 0.55);
+    /* Default Theme: Studio Draft (Warm Linen Drafting Parchment & Charcoal Ink) */
+    --bg-main: #fbf8f2;
+    --canvas-bg: #faf6ee;
+    --text-primary: #1c1917;
+    --text-muted: #57534e;
+    --border-sketch: #292524;
+    --button-bg: #292524;
+    --button-text: #fafaf9;
+    --tab-active-bg: #292524;
+    --tab-active-text: #fafaf9;
+    --card-bg: rgba(255, 255, 255, 0.98);
+    --sticky-bg: #fdfbf7;
+    --sticky-border: #78716c;
+    --shadow-color: rgba(28, 25, 23, 0.14);
 }
 
-/* Theme 1: Studio Draft (Pure Linen Paper & Prussian Blue - Clean Architectural) */
+/* Theme 1: Studio Draft (Pure Linen Paper & Charcoal Ink - Clean Architectural) */
 body.theme-parchment,
 body.theme-draft {
-    --bg-main: #f1f5f9;
-    --canvas-bg: #ffffff;
-    --text-primary: #0f172a;
-    --text-muted: #64748b;
-    --border-sketch: #1e3a8a;
-    --button-bg: #1e293b;
-    --button-text: #ffffff;
-    --tab-active-bg: #1e3a8a;
-    --tab-active-text: #ffffff;
+    --bg-main: #fbf8f2;
+    --canvas-bg: #faf6ee;
+    --text-primary: #1c1917;
+    --text-muted: #57534e;
+    --border-sketch: #292524;
+    --button-bg: #292524;
+    --button-text: #fafaf9;
+    --tab-active-bg: #292524;
+    --tab-active-text: #fafaf9;
     --card-bg: rgba(255, 255, 255, 0.98);
-    --sticky-bg: #f8fafc;
-    --sticky-border: #3b82f6;
-    --shadow-color: rgba(15, 23, 42, 0.16);
+    --sticky-bg: #fdfbf7;
+    --sticky-border: #78716c;
+    --shadow-color: rgba(28, 25, 23, 0.14);
 }
 
 /* Theme 2: Cyanotype Blueprint */
@@ -108,23 +108,26 @@ body {
     color: var(--text-primary);
     font-family: var(--font-heading);
     min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 10px 12px;
-    overflow-x: hidden;
+    padding: 6px 14px;
+    overflow: hidden;
+    box-sizing: border-box;
     transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Header & Logo */
 header {
     width: 100%;
-    max-width: 840px;
+    max-width: min(calc((100vh - 90px) * (800 / 640)), 1280px);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     padding: 2px 4px;
 }
 
@@ -202,10 +205,13 @@ h1 {
 .game-container {
     position: relative;
     width: 100%;
-    max-width: 840px;
+    max-width: min(calc((100vh - 90px) * (800 / 640)), 1280px);
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    min-height: 0;
 }
 
 /* Diegetic Notebook Top HUD Bar */
@@ -214,7 +220,7 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     padding: 0 4px;
     gap: 8px;
 }
@@ -330,15 +336,21 @@ h1 {
 .canvas-wrapper {
     position: relative;
     width: 100%;
+    flex: 1;
     display: flex;
     justify-content: center;
+    align-items: center;
+    min-height: 0;
 }
 
 #gameCanvas {
     display: block;
-    width: 100%;
-    max-width: 800px;
-    height: auto;
+    width: auto;
+    height: 100%;
+    max-height: 100%;
+    max-width: 100%;
+    aspect-ratio: 800 / 640;
+    object-fit: contain;
     background-color: var(--canvas-bg);
     border: 3px solid var(--border-sketch);
     border-radius: 12px;
@@ -357,9 +369,8 @@ h1 {
 /* Mobile Touch Bar */
 .mobile-touch-bar {
     width: 100%;
-    max-width: 800px;
-    margin-top: 6px;
-    padding: 8px;
+    margin-top: 4px;
+    padding: 6px;
     text-align: center;
     font-family: var(--font-sketch);
     font-size: 0.85rem;
@@ -367,6 +378,7 @@ h1 {
     border: 2px dashed var(--border-sketch);
     border-radius: 8px;
     background: var(--sticky-bg);
+    box-sizing: border-box;
     display: block;
 }
 
