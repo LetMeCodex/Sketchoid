@@ -360,7 +360,8 @@ class Ball {
         this.vy = vy;
 
         this.trail = [];
-        this.maxTrail = 6;
+        this.maxTrail = 16;
+        this.particles = [];
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
@@ -465,11 +466,41 @@ class Ball {
             this.prevX = this.x;
             this.prevY = this.y;
             this.speed = this.baseSpeed;
+            this.trail = [];
+            this.particles = [];
             return;
         }
 
-        this.trail.unshift({ x: this.x, y: this.y });
+        const trailType = window.progression?.data?.player?.selectedTrail || window.progression?.data?.selectedTrail || 'charcoal';
+
+        this.trail.unshift({ x: this.x, y: this.y, speed: this.speed, time: performance.now() });
         if (this.trail.length > this.maxTrail) this.trail.pop();
+
+        // Spawn dynamic trail particles
+        if (Math.random() < 0.65) {
+            const angle = Math.atan2(this.vy, this.vx) + Math.PI + (Math.random() - 0.5) * 1.2;
+            const pSpeed = 0.5 + Math.random() * 2.0;
+            this.particles.push({
+                x: this.x + (Math.random() - 0.5) * 6,
+                y: this.y + (Math.random() - 0.5) * 6,
+                vx: Math.cos(angle) * pSpeed,
+                vy: Math.sin(angle) * pSpeed,
+                life: 1.0,
+                maxLife: 0.35 + Math.random() * 0.3,
+                size: 2.0 + Math.random() * 3.5,
+                hue: Math.random() * 360,
+                type: this.isFireball ? 'fireball' : trailType
+            });
+        }
+
+        // Update trail particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= dt / p.maxLife;
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
 
         if (this.isFireball) {
             this.fireballTimer -= dt;
@@ -478,7 +509,7 @@ class Ball {
 
         const k = 0.30;
         const damping = 0.68;
-        const speedStretch = Math.min(1.25, 1.0 + (this.speed - this.baseSpeed) * 0.024);
+        const speedStretch = Math.min(1.30, 1.0 + (this.speed - this.baseSpeed) * 0.028);
         const targetSx = 1.0 / speedStretch;
         const targetSy = speedStretch;
 
@@ -501,54 +532,146 @@ class Ball {
         ctx.save();
 
         const trailType = window.progression?.data?.player?.selectedTrail || window.progression?.data?.selectedTrail || 'charcoal';
+        const now = performance.now();
 
-        // Fast Motion Trails
-        for (let i = 0; i < this.trail.length; i++) {
-            const t = this.trail[i];
-            const trailAlpha = (1 - i / this.trail.length) * 0.45;
-            const r = this.radius * (1 - i / (this.trail.length * 1.35));
-            
-            if (this.isFireball) {
-                ctx.fillStyle = `rgba(239, 68, 68, ${trailAlpha})`;
+        // 1. Continuous Ribbon / Lightning Trail
+        if (this.trail.length >= 2) {
+            if (trailType === 'neon' || this.isFireball) {
+                // Electric Lightning Arc or Molten Core Ribbon
+                ctx.save();
+                ctx.strokeStyle = this.isFireball ? '#f97316' : '#38bdf8';
+                ctx.lineWidth = this.radius * 1.6;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 0.35;
+                ctx.beginPath();
+                ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                for (let i = 1; i < this.trail.length; i++) {
+                    ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                }
+                ctx.stroke();
+
+                // Inner bright electric crackle line
+                ctx.strokeStyle = this.isFireball ? '#fef08a' : '#e0f2fe';
+                ctx.lineWidth = 3.0;
+                ctx.globalAlpha = 0.85;
+                ctx.beginPath();
+                ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                for (let i = 1; i < this.trail.length; i++) {
+                    const jitterX = (Math.sin(now * 0.03 + i * 2) - 0.5) * 4;
+                    const jitterY = (Math.cos(now * 0.03 + i * 2) - 0.5) * 4;
+                    ctx.lineTo(this.trail[i].x + jitterX, this.trail[i].y + jitterY);
+                }
+                ctx.stroke();
+                ctx.restore();
             } else if (trailType === 'rainbow') {
-                const hue = (Date.now() / 8 + i * 25) % 360;
-                ctx.fillStyle = `hsla(${hue}, 90%, 60%, ${trailAlpha})`;
-            } else if (trailType === 'nebula') {
-                ctx.fillStyle = i % 2 === 0 ? `rgba(168, 85, 247, ${trailAlpha})` : `rgba(56, 189, 248, ${trailAlpha})`;
-            } else if (trailType === 'neon') {
-                ctx.fillStyle = `rgba(56, 189, 248, ${trailAlpha})`;
-            } else {
-                ctx.fillStyle = theme.ballTrail;
-            }
+                // Chromatic Rainbow Ribbon
+                for (let i = 0; i < this.trail.length - 1; i++) {
+                    const t1 = this.trail[i];
+                    const t2 = this.trail[i + 1];
+                    const progress = i / this.trail.length;
+                    const hue = (now * 0.15 + i * 22) % 360;
+                    const width = this.radius * 2.0 * (1 - progress * 0.75);
 
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, Math.max(1.2, r), 0, Math.PI * 2);
-            ctx.fill();
+                    ctx.save();
+                    ctx.strokeStyle = `hsla(${hue}, 95%, 60%, ${0.65 * (1 - progress)})`;
+                    ctx.lineWidth = width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(t1.x, t1.y);
+                    ctx.lineTo(t2.x, t2.y);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            } else if (trailType === 'nebula') {
+                // Quantum Nebula Celestial Plume
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const progress = i / this.trail.length;
+                    const r = this.radius * (1.6 - progress * 0.85);
+                    const alpha = 0.45 * (1 - progress);
+                    ctx.save();
+                    ctx.fillStyle = i % 2 === 0 ? `rgba(168, 85, 247, ${alpha})` : `rgba(56, 189, 248, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            } else {
+                // Charcoal Graphite Shaded Streak
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const progress = i / this.trail.length;
+                    const r = this.radius * (1.3 - progress * 0.7);
+                    ctx.save();
+                    ctx.fillStyle = theme.bgDark ? `rgba(148, 163, 184, ${0.40 * (1 - progress)})` : `rgba(30, 41, 59, ${0.30 * (1 - progress)})`;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
         }
 
+        // 2. Render Flying Particles
+        for (const p of this.particles) {
+            ctx.save();
+            const alpha = Math.max(0, p.life);
+            if (p.type === 'fireball') {
+                ctx.fillStyle = `rgba(249, 115, 22, ${alpha})`;
+            } else if (p.type === 'rainbow') {
+                ctx.fillStyle = `hsla(${p.hue}, 95%, 60%, ${alpha})`;
+            } else if (p.type === 'nebula') {
+                ctx.fillStyle = `rgba(168, 85, 247, ${alpha})`;
+            } else if (p.type === 'neon') {
+                ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+            } else {
+                ctx.fillStyle = theme.bgDark ? `rgba(226, 232, 240, ${alpha * 0.7})` : `rgba(51, 65, 85, ${alpha * 0.6})`;
+            }
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 3. Render Ball Core & Outline
         const flightAngle = Math.atan2(this.vy, this.vx) + Math.PI / 2;
         ctx.translate(this.x, this.y);
         ctx.rotate(flightAngle);
         ctx.scale(this.scaleX, this.scaleY);
 
-        const ballColor = this.isFireball ? '#f97316' : theme.ballFill;
-        const ballStroke = this.isFireball ? '#ef4444' : theme.ballStroke;
-        const ballRadius = this.isFireball ? this.radius * 1.3 : this.radius;
+        let ballColor = this.isFireball ? '#f97316' : theme.ballFill;
+        let ballStroke = this.isFireball ? '#ef4444' : theme.ballStroke;
+        const ballRadius = this.isFireball ? this.radius * 1.35 : this.radius;
 
-        // Ultra-fast 2D Canvas rendering with hand-drawn stylized borders
+        // Custom Ball Colors based on equipped trail
+        if (!this.isFireball) {
+            if (trailType === 'rainbow') {
+                const headHue = (now * 0.2) % 360;
+                ballColor = `hsla(${headHue}, 90%, 65%, 1.0)`;
+                ballStroke = '#ffffff';
+            } else if (trailType === 'nebula') {
+                ballColor = '#c084fc';
+                ballStroke = '#f3e8ff';
+            } else if (trailType === 'neon') {
+                ballColor = '#38bdf8';
+                ballStroke = '#ffffff';
+            }
+        }
+
         ctx.fillStyle = ballColor;
         ctx.strokeStyle = ballStroke;
-        ctx.lineWidth = 2.2;
+        ctx.lineWidth = 2.4;
 
         ctx.beginPath();
         ctx.arc(0, 0, ballRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Subtle specular glint
+        // High-contrast Specular Glint
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.30, 0, Math.PI * 2);
+        ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.35, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
