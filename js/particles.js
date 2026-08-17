@@ -1,52 +1,51 @@
 /**
- * Neo-Arkanoid Particle & Visual FX Engine
- * Hand-drawn sketchy particle shards, shockwaves, floating text, and screen shake
+ * SKETCHOID Particle & Visual FX Engine (Ultra-Optimized 60 FPS)
+ * High-performance sketchy shards, sparks, shockwaves, and floating text
  */
 class ParticleSystem {
     constructor() {
         this.particles = [];
+        this.maxParticles = 75;
         this.floatingTexts = [];
+        this.maxFloatingTexts = 8;
         this.shockwaves = [];
-        this.shakeTime = 0;
-        this.shakeMagnitude = 0;
-        this.shakeOffset = { x: 0, y: 0, rotation: 0 };
+        this.maxShockwaves = 6;
     }
 
     reset() {
-        this.particles = [];
-        this.floatingTexts = [];
-        this.shockwaves = [];
-        this.shakeTime = 0;
-        this.shakeMagnitude = 0;
-        this.shakeOffset = { x: 0, y: 0, rotation: 0 };
+        this.particles.length = 0;
+        this.floatingTexts.length = 0;
+        this.shockwaves.length = 0;
     }
 
-    /**
-     * Trigger screen shake impulse
-     */
-    addShake(magnitude = 6, duration = 0.25) {
-        this.shakeMagnitude = Math.max(this.shakeMagnitude, magnitude);
-        this.shakeTime = Math.max(this.shakeTime, duration);
+    addShake(magnitude = 4, duration = 0.15) {
+        // Delegate to unified Camera2D to prevent double-shaking
+        if (window.game && window.game.camera) {
+            window.game.camera.addTrauma(magnitude * 0.04);
+        }
     }
 
     /**
      * Create explosion debris of hand-drawn shards
      */
-    createBrickExplosion(x, y, w, h, color, tier = 'emerald', count = 14) {
+    createBrickExplosion(x, y, w, h, color, tier = 'emerald', count = 10) {
         const isNuke = tier === 'ruby';
-        const numShards = isNuke ? count * 2 : count;
+        const numShards = Math.min(isNuke ? 14 : count, 14);
         
         for (let i = 0; i < numShards; i++) {
+            if (this.particles.length >= this.maxParticles) {
+                this.particles.shift();
+            }
+
             const angle = Math.random() * Math.PI * 2;
-            const speed = (isNuke ? 3.5 : 2.0) + Math.random() * (isNuke ? 7.0 : 4.5);
-            const size = 4 + Math.random() * (isNuke ? 12 : 8);
+            const speed = (isNuke ? 3.0 : 1.8) + Math.random() * (isNuke ? 4.5 : 3.2);
+            const size = 3 + Math.random() * 6;
             
-            // Random polygon vertices for hand-drawn shards
-            const numVertices = 3 + Math.floor(Math.random() * 3);
             const vertices = [];
+            const numVertices = 3;
             for (let v = 0; v < numVertices; v++) {
-                const a = (v / numVertices) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-                const r = size * (0.6 + Math.random() * 0.8);
+                const a = (v / numVertices) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+                const r = size * (0.7 + Math.random() * 0.6);
                 vertices.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
             }
 
@@ -55,35 +54,14 @@ class ParticleSystem {
                 x: x + Math.random() * w,
                 y: y + Math.random() * h,
                 vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 1.5,
-                gravity: 0.15,
-                friction: 0.97,
+                vy: Math.sin(angle) * speed - 1.0,
+                gravity: 0.14,
+                friction: 0.96,
                 rotation: Math.random() * Math.PI * 2,
-                vRot: (Math.random() - 0.5) * 0.25,
+                vRot: (Math.random() - 0.5) * 0.2,
                 vertices,
                 color,
-                strokeColor: '#222222',
                 alpha: 1.0,
-                life: 1.0,
-                decay: 0.015 + Math.random() * 0.02,
-                roughSeed: Math.floor(Math.random() * 1000)
-            });
-        }
-
-        // Add smoke puff scribble
-        for (let i = 0; i < 4; i++) {
-            this.particles.push({
-                type: 'puff',
-                x: x + w / 2 + (Math.random() - 0.5) * w,
-                y: y + h / 2 + (Math.random() - 0.5) * h,
-                vx: (Math.random() - 0.5) * 1.5,
-                vy: (Math.random() - 0.5) * 1.5 - 0.5,
-                gravity: -0.02,
-                friction: 0.94,
-                radius: 6 + Math.random() * 12,
-                maxRadius: 18 + Math.random() * 14,
-                color: 'rgba(200, 200, 200, 0.4)',
-                alpha: 0.8,
                 life: 1.0,
                 decay: 0.03 + Math.random() * 0.02
             });
@@ -91,15 +69,18 @@ class ParticleSystem {
 
         // Add expanding shockwave if heavy hit or ruby bomb
         if (isNuke || tier === 'amethyst' || tier === 'gold') {
+            if (this.shockwaves.length >= this.maxShockwaves) {
+                this.shockwaves.shift();
+            }
             this.shockwaves.push({
                 x: x + w / 2,
                 y: y + h / 2,
-                radius: 10,
-                maxRadius: isNuke ? 120 : 60,
-                speed: isNuke ? 8 : 4,
+                radius: 8,
+                maxRadius: isNuke ? 85 : 45,
+                speed: isNuke ? 6 : 3.5,
                 color: color,
-                alpha: 0.9,
-                decay: 0.03
+                alpha: 0.85,
+                decay: 0.04
             });
         }
     }
@@ -107,10 +88,14 @@ class ParticleSystem {
     /**
      * Create laser impact spark burst
      */
-    createLaserSparks(x, y, color = '#ff0055', count = 8) {
+    createLaserSparks(x, y, color = '#ff0055', count = 5) {
         for (let i = 0; i < count; i++) {
+            if (this.particles.length >= this.maxParticles) {
+                this.particles.shift();
+            }
+
             const angle = Math.random() * Math.PI * 2;
-            const speed = 2 + Math.random() * 4;
+            const speed = 2 + Math.random() * 3.5;
             this.particles.push({
                 type: 'spark',
                 x: x,
@@ -119,35 +104,38 @@ class ParticleSystem {
                 vy: Math.sin(angle) * speed,
                 gravity: 0.1,
                 friction: 0.92,
-                length: 4 + Math.random() * 6,
+                length: 4 + Math.random() * 4,
                 color: color,
                 alpha: 1.0,
                 life: 1.0,
-                decay: 0.04 + Math.random() * 0.04
+                decay: 0.06 + Math.random() * 0.04
             });
         }
     }
 
     /**
-     * Create paddle hit bounce ripples
+     * Create paddle hit bounce sparks
      */
     createPaddleHitSparks(x, y, paddleVx = 0) {
-        for (let i = 0; i < 6; i++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
-            const speed = 2 + Math.random() * 3;
+        for (let i = 0; i < 4; i++) {
+            if (this.particles.length >= this.maxParticles) {
+                this.particles.shift();
+            }
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.0;
+            const speed = 2 + Math.random() * 2.5;
             this.particles.push({
                 type: 'spark',
                 x: x,
                 y: y,
-                vx: Math.cos(angle) * speed + paddleVx * 0.2,
+                vx: Math.cos(angle) * speed + paddleVx * 0.15,
                 vy: Math.sin(angle) * speed,
                 gravity: 0.12,
                 friction: 0.94,
-                length: 4 + Math.random() * 4,
-                color: '#ffdd44',
+                length: 3 + Math.random() * 4,
+                color: '#fbbf24',
                 alpha: 1.0,
                 life: 1.0,
-                decay: 0.05
+                decay: 0.07
             });
         }
     }
@@ -156,40 +144,29 @@ class ParticleSystem {
      * Add floating score / combo text
      */
     addFloatingText(text, x, y, color = '#ffffff', scale = 1.0, isCombo = false) {
+        if (this.floatingTexts.length >= this.maxFloatingTexts) {
+            this.floatingTexts.shift();
+        }
+
         this.floatingTexts.push({
             text,
             x,
             y,
-            vy: -2.2,
+            vy: -2.0,
             alpha: 1.0,
             life: 1.0,
-            decay: isCombo ? 0.018 : 0.025,
+            decay: isCombo ? 0.024 : 0.035,
             color,
-            scale,
+            scale: Math.min(1.4, scale),
             wobble: Math.random() * 100,
             isCombo
         });
     }
 
     /**
-     * Update all particles, shockwaves, and texts
+     * Fast update loop
      */
     update(dt = 1 / 60) {
-        // Screen Shake update
-        if (this.shakeTime > 0) {
-            this.shakeTime -= dt;
-            const factor = Math.max(0, this.shakeTime / 0.3);
-            const currentMag = this.shakeMagnitude * factor;
-            this.shakeOffset.x = (Math.random() - 0.5) * 2 * currentMag;
-            this.shakeOffset.y = (Math.random() - 0.5) * 2 * currentMag;
-            this.shakeOffset.rotation = (Math.random() - 0.5) * 0.02 * currentMag;
-        } else {
-            this.shakeMagnitude = 0;
-            this.shakeOffset.x = 0;
-            this.shakeOffset.y = 0;
-            this.shakeOffset.rotation = 0;
-        }
-
         // Update particles
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -202,10 +179,6 @@ class ParticleSystem {
             
             p.life -= p.decay;
             p.alpha = Math.max(0, p.life);
-
-            if (p.type === 'puff') {
-                p.radius += (p.maxRadius - p.radius) * 0.08;
-            }
 
             if (p.life <= 0) {
                 this.particles.splice(i, 1);
@@ -226,7 +199,7 @@ class ParticleSystem {
         for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
             const ft = this.floatingTexts[i];
             ft.y += ft.vy;
-            ft.vy *= 0.94;
+            ft.vy *= 0.93;
             ft.wobble += 0.1;
             ft.life -= ft.decay;
             ft.alpha = Math.max(0, ft.life);
@@ -237,32 +210,27 @@ class ParticleSystem {
     }
 
     /**
-     * Render particles with Rough.js and 2D canvas context
+     * Fast batch rendering
      */
     draw(ctx, rc, theme) {
         ctx.save();
 
         // 1. Draw Shockwaves
-        for (const sw of this.shockwaves) {
+        for (let i = 0; i < this.shockwaves.length; i++) {
+            const sw = this.shockwaves[i];
             ctx.save();
             ctx.strokeStyle = sw.color;
-            ctx.globalAlpha = sw.alpha * 0.7;
-            ctx.lineWidth = 2.5;
+            ctx.globalAlpha = sw.alpha * 0.6;
+            ctx.lineWidth = 2.0;
             ctx.beginPath();
-            // Jittery sketchy circle
-            for (let a = 0; a <= Math.PI * 2 + 0.2; a += 0.2) {
-                const r = sw.radius + (Math.sin(a * 7) * 2);
-                const px = sw.x + Math.cos(a) * r;
-                const py = sw.y + Math.sin(a) * r;
-                if (a === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-            }
+            ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
         }
 
         // 2. Draw Particles
-        for (const p of this.particles) {
+        for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
             ctx.save();
             ctx.globalAlpha = p.alpha;
 
@@ -271,8 +239,8 @@ class ParticleSystem {
                 ctx.rotate(p.rotation);
 
                 ctx.fillStyle = p.color;
-                ctx.strokeStyle = theme.inkColor;
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = theme.borderStroke;
+                ctx.lineWidth = 1.2;
 
                 ctx.beginPath();
                 if (p.vertices && p.vertices.length > 0) {
@@ -284,17 +252,12 @@ class ParticleSystem {
                     ctx.fill();
                     ctx.stroke();
                 }
-            } else if (p.type === 'puff') {
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, Math.max(0.1, p.radius), 0, Math.PI * 2);
-                ctx.fill();
             } else if (p.type === 'spark') {
                 ctx.strokeStyle = p.color;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1.8;
                 ctx.beginPath();
                 ctx.moveTo(p.x, p.y);
-                ctx.lineTo(p.x - p.vx * 2, p.y - p.vy * 2);
+                ctx.lineTo(p.x - p.vx * 1.8, p.y - p.vy * 1.8);
                 ctx.stroke();
             }
 
@@ -302,24 +265,26 @@ class ParticleSystem {
         }
 
         // 3. Draw Floating Texts
-        for (const ft of this.floatingTexts) {
-            ctx.save();
-            ctx.globalAlpha = ft.alpha;
-            const wobbleX = Math.sin(ft.wobble) * 2;
-            const wobbleY = Math.cos(ft.wobble) * 1.5;
-
-            ctx.font = ft.isCombo ? `bold ${Math.round(20 * ft.scale)}px 'Fredoka', cursive` : `bold ${Math.round(15 * ft.scale)}px 'JetBrains Mono', monospace`;
+        if (this.floatingTexts.length > 0) {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Text shadow for high legibility
-            ctx.fillStyle = theme.bgDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)';
-            ctx.fillText(ft.text, ft.x + wobbleX + 1.5, ft.y + wobbleY + 1.5);
+            for (let i = 0; i < this.floatingTexts.length; i++) {
+                const ft = this.floatingTexts[i];
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                const wobbleX = Math.sin(ft.wobble) * 1.5;
 
-            ctx.fillStyle = ft.color;
-            ctx.fillText(ft.text, ft.x + wobbleX, ft.y + wobbleY);
+                ctx.font = ft.isCombo ? `bold ${Math.round(18 * ft.scale)}px 'Fredoka', cursive` : `bold ${Math.round(14 * ft.scale)}px 'JetBrains Mono', monospace`;
 
-            ctx.restore();
+                ctx.fillStyle = theme.bgDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.92)';
+                ctx.fillText(ft.text, ft.x + wobbleX + 1.2, ft.y + 1.2);
+
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x + wobbleX, ft.y);
+
+                ctx.restore();
+            }
         }
 
         ctx.restore();

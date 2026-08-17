@@ -1,5 +1,5 @@
 /**
- * SKETCHOID Main Game Engine & Controller (Phase 3 Full Universe)
+ * SKETCHOID Main Game Engine & Controller (60 FPS Performance & Visual Stability Upgrade)
  * Living Sketchbook Renderer, Dynamic Stage Evolution, Page Turn Mutation,
  * Interactive Geometry, Boss Battles (Arch-Pencil), Challenges, and Collection Unlocks
  */
@@ -249,8 +249,8 @@ class Game {
                 if (this.comboStreak >= 12 && !this.isCrystalFrenzy) {
                     this.isCrystalFrenzy = true;
                     this.crystalFrenzyTimer = 8;
-                    this.camera.flash('#fbbf24', 0.3);
-                    window.particleSystem?.addFloatingText('🔥 CRYSTAL FRENZY! (3x)', this.width / 2, this.height / 2 - 40, '#fbbf24', 1.8, true);
+                    this.camera.flash('#fbbf24', 0.20);
+                    window.particleSystem?.addFloatingText('🔥 CRYSTAL FRENZY! (3x)', this.width / 2, this.height / 2 - 40, '#fbbf24', 1.5, true);
                 }
 
                 if (this.isCrystalFrenzy) styleMultiplier *= 1.5;
@@ -259,10 +259,10 @@ class Game {
 
                 if (brick.typeKey === 'SAPPHIRE') {
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.35);
-                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#38bdf8', 6);
+                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#38bdf8', 4);
                 } else if (brick.typeKey === 'EMERALD') {
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.5);
-                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#10b981', 6);
+                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#10b981', 4);
                 } else if (brick.typeKey === 'AMBER' && brick.damageState === 'CRACKED') {
                     this.propagateAmberFracture(brick);
                 }
@@ -276,24 +276,24 @@ class Game {
                     window.soundEngine?.playExplosion(brick.isExplosive);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
                     
-                    const splatSize = window.challengeManager?.activeChallenge?.heavyInk ? 24 : 12;
+                    const splatSize = window.challengeManager?.activeChallenge?.heavyInk ? 18 : 10;
                     this.sketchbook.addInkSplatter(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.strokeColor, splatSize);
 
                     if (brick.typeKey === 'AMETHYST') {
-                        this.physicsWorld.hitStop.trigger(50);
-                        this.camera.addTrauma(0.35);
-                        this.camera.impactZoom(1.03);
+                        this.physicsWorld.hitStop.trigger(30);
+                        this.camera.addTrauma(0.16);
+                        this.camera.impactZoom(1.02);
                     } else if (brick.isExplosive) {
-                        this.physicsWorld.hitStop.trigger(65);
-                        this.camera.addTrauma(0.55);
-                        this.camera.flash('#ef4444', 0.28);
+                        this.physicsWorld.hitStop.trigger(30);
+                        this.camera.addTrauma(0.25);
+                        this.camera.flash('#ef4444', 0.20);
                         this.triggerRubyNuke(brick);
                     } else {
-                        this.camera.addTrauma(0.12);
+                        this.camera.addTrauma(0.04);
                     }
 
                     const comboText = styleCallout ? `${styleCallout} +${earnedPts}` : (this.comboMultiplier > 1 ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`);
-                    window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, styleCallout ? 1.35 : 1.0, !!styleCallout);
+                    window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, styleCallout ? 1.25 : 1.0, !!styleCallout);
 
                     if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
                         window.soundEngine?.playPowerupSpawn();
@@ -302,33 +302,33 @@ class Game {
 
                     this.checkLevelClear();
                 } else {
-                    this.camera.punch(-hitResult.normalX, -hitResult.normalY, 3.5);
-                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, brick.config.color, 4);
+                    this.camera.punch(-hitResult.normalX, -hitResult.normalY, 1.8);
+                    window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, brick.config.color, 3);
                 }
                 this.updateHUD();
             } else if (type === 'bossHit') {
                 const { boss, ball, hitResult, defeated } = payload;
-                this.physicsWorld.hitStop.trigger(45);
-                this.camera.addTrauma(0.4);
-                this.camera.impactZoom(1.035);
+                this.physicsWorld.hitStop.trigger(30);
+                this.camera.addTrauma(0.20);
+                this.camera.impactZoom(1.025);
                 window.soundEngine?.playExplosion(false);
                 window.soundEngine?.playBrickChime(15, 'amethyst');
 
                 const hitX = hitResult ? hitResult.contactX : boss.x;
                 const hitY = hitResult ? hitResult.contactY : boss.y;
 
-                window.particleSystem?.createLaserSparks(hitX, hitY, '#fbbf24', 12);
-                this.sketchbook.addInkSplatter(hitX, hitY, '#78350f', 16);
+                window.particleSystem?.createLaserSparks(hitX, hitY, '#fbbf24', 8);
+                this.sketchbook.addInkSplatter(hitX, hitY, '#78350f', 12);
                 this.addScore(250);
-                window.particleSystem?.addFloatingText('+250 BOSS HIT!', hitX, hitY - 20, '#fbbf24', 1.4, true);
+                window.particleSystem?.addFloatingText('+250 BOSS HIT!', hitX, hitY - 20, '#fbbf24', 1.3, true);
 
                 if (defeated) {
                     window.progression?.recordStat('bossDefeated', 1);
-                    this.camera.flash('#fbbf24', 0.5);
-                    this.camera.impactZoom(1.08);
+                    this.camera.flash('#fbbf24', 0.35);
+                    this.camera.impactZoom(1.05);
                     window.soundEngine?.playLevelClear();
                     this.addScore(5000);
-                    window.particleSystem?.addFloatingText('🏆 ARCH-PENCIL VANQUISHED! +5000', this.width / 2, this.height / 2 - 30, '#fbbf24', 2.0, true);
+                    window.particleSystem?.addFloatingText('🏆 ARCH-PENCIL VANQUISHED! +5000', this.width / 2, this.height / 2 - 30, '#fbbf24', 1.8, true);
                     this.checkLevelClear();
                 }
                 this.updateHUD();
@@ -336,13 +336,13 @@ class Game {
                 const { ball, deflection, isEdgeFlick, swingVelocity } = payload;
                 window.soundEngine?.playPaddleBoing(Math.abs(deflection.offset));
                 window.particleSystem?.createPaddleHitSparks(ball.x, this.paddle.y, swingVelocity);
-                this.camera.punch(deflection.vx * 0.4, 4, isEdgeFlick ? 6 : 3.5);
+                this.camera.punch(deflection.vx * 0.25, 2.5, isEdgeFlick ? 3.8 : 2.0);
 
                 if (isEdgeFlick) {
-                    this.physicsWorld.hitStop.trigger(35);
-                    this.camera.impactZoom(1.025);
+                    this.physicsWorld.hitStop.trigger(25);
+                    this.camera.impactZoom(1.02);
                     this.addScore(150);
-                    window.particleSystem?.addFloatingText('PERFECT REBOUND! +150', ball.x, this.paddle.y - 25, '#38bdf8', 1.4, true);
+                    window.particleSystem?.addFloatingText('PERFECT REBOUND! +150', ball.x, this.paddle.y - 25, '#38bdf8', 1.3, true);
                 }
 
                 this.comboStreak = 0;
@@ -352,14 +352,14 @@ class Game {
                 const { x, y } = payload;
                 window.progression?.recordStat('nearMisses', 1);
                 this.addScore(50);
-                this.camera.addTrauma(0.08);
+                this.camera.addTrauma(0.04);
                 window.soundEngine?.playWallTick();
-                window.particleSystem?.createLaserSparks(x, y, '#fbbf24', 4);
-                window.particleSystem?.addFloatingText('NEAR MISS +50', x, y - 18, '#fbbf24', 1.15, true);
+                window.particleSystem?.createLaserSparks(x, y, '#fbbf24', 3);
+                window.particleSystem?.addFloatingText('NEAR MISS +50', x, y - 18, '#fbbf24', 1.1, true);
                 this.updateHUD();
             } else if (type === 'laserHit') {
                 const { laser, brick, destroyed } = payload;
-                window.particleSystem?.createLaserSparks(laser.x, laser.y, '#ff0055', 6);
+                window.particleSystem?.createLaserSparks(laser.x, laser.y, '#ff0055', 4);
                 if (destroyed) {
                     window.progression?.recordStat('bricksBroken', 1);
                     const earnedPts = Math.round(brick.score * this.comboMultiplier);
@@ -491,7 +491,7 @@ class Game {
                     const clampedAngle = Math.max(-Math.PI * 0.85, Math.min(-Math.PI * 0.15, aimAngle));
                     ball.launch(clampedAngle);
                     window.soundEngine?.playPaddleBoing(0.3);
-                    this.camera.punch(0, -4, 4);
+                    this.camera.punch(0, -2.5, 3.0);
                     launchedAny = true;
                 }
             }
@@ -500,7 +500,7 @@ class Game {
                 const newLasers = this.paddle.fireLasers();
                 if (newLasers) {
                     this.lasers.push(...newLasers);
-                    this.camera.punch(0, 2, 2.5);
+                    this.camera.punch(0, 1.2, 1.8);
                 }
             }
         }
@@ -711,12 +711,12 @@ class Game {
         if (remainingDestructible.length === 0 && bossDefeated && this.state === 'PLAYING') {
             this.state = 'LEVEL_CLEAR';
             window.soundEngine?.playLevelClear();
-            this.camera.impactZoom(1.06);
-            this.camera.flash('#10b981', 0.35);
+            this.camera.impactZoom(1.04);
+            this.camera.flash('#10b981', 0.25);
 
             const clearBonus = 1000 * (this.levelIndex + 1);
             this.addScore(clearBonus);
-            window.particleSystem?.addFloatingText(`STAGE CLEAR! +${clearBonus}`, this.width / 2, this.height / 2 - 20, '#fbbf24', 1.8, true);
+            window.particleSystem?.addFloatingText(`STAGE CLEAR! +${clearBonus}`, this.width / 2, this.height / 2 - 20, '#fbbf24', 1.6, true);
 
             setTimeout(() => {
                 if (this.state === 'LEVEL_CLEAR') {
@@ -726,7 +726,7 @@ class Game {
                     if (cScore) cScore.innerText = this.score;
                     if (cCombo) cCombo.innerText = `${this.maxComboStreak}x`;
                 }
-            }, 600);
+            }, 500);
         }
     }
 
@@ -738,8 +738,8 @@ class Game {
         }
 
         window.soundEngine?.playBallLost();
-        this.camera.addTrauma(0.4);
-        this.camera.flash('#ef4444', 0.25);
+        this.camera.addTrauma(0.25);
+        this.camera.flash('#ef4444', 0.20);
         this.comboStreak = 0;
         this.comboMultiplier = 1;
         this.isCrystalFrenzy = false;
@@ -768,8 +768,8 @@ class Game {
 
     applyPowerup(type) {
         window.soundEngine?.playPowerupCollect(type);
-        this.physicsWorld.hitStop.trigger(35);
-        this.camera.impactZoom(1.03);
+        this.physicsWorld.hitStop.trigger(25);
+        this.camera.impactZoom(1.02);
 
         const pNames = {
             multiball: '3X MULTIBALL FRENZY!',
@@ -788,7 +788,7 @@ class Game {
             slowmo: '#8b5cf6'
         };
 
-        window.particleSystem?.addFloatingText(pNames[type] || 'POWERUP!', this.paddle.x + this.paddle.width / 2, this.paddle.y - 30, pColors[type] || '#ffffff', 1.4, true);
+        window.particleSystem?.addFloatingText(pNames[type] || 'POWERUP!', this.paddle.x + this.paddle.width / 2, this.paddle.y - 30, pColors[type] || '#ffffff', 1.3, true);
 
         if (type === 'multiball') {
             const newBalls = [];
@@ -824,11 +824,17 @@ class Game {
         }
     }
 
+    /**
+     * Optimized Ruby Explosive Reaction
+     */
     triggerRubyNuke(centerBrick) {
         window.soundEngine?.playExplosion(true);
-        const explosionRadius = 95;
+        const explosionRadius = 90;
         const cx = centerBrick.x + centerBrick.width / 2;
         const cy = centerBrick.y + centerBrick.height / 2;
+
+        let totalChainPts = 0;
+        let chainCount = 0;
 
         for (const brick of this.bricks) {
             if (brick.isAlive && brick !== centerBrick && !brick.unbreakable) {
@@ -838,17 +844,26 @@ class Game {
 
                 if (dist <= explosionRadius) {
                     const destroyed = brick.takeDamage(2);
-                    window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id, 8);
                     if (destroyed) {
-                        const earnedPts = Math.round(brick.score * this.comboMultiplier * 2.0);
-                        this.addScore(earnedPts);
-                        window.particleSystem?.addFloatingText(`CHAIN! +${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.25, true);
+                        chainCount++;
+                        totalChainPts += Math.round(brick.score * this.comboMultiplier * 2.0);
+                        if (chainCount <= 2) {
+                            window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id, 6);
+                        } else {
+                            window.particleSystem?.createLaserSparks(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 3);
+                        }
+
                         if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
                             this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                         }
                     }
                 }
             }
+        }
+
+        if (totalChainPts > 0) {
+            this.addScore(totalChainPts);
+            window.particleSystem?.addFloatingText(`CHAIN x${chainCount}! +${totalChainPts}`, cx, cy, '#ef4444', 1.3, true);
         }
     }
 
@@ -998,9 +1013,9 @@ class Game {
         this.sketchbook.drawBackgroundLayers(ctx, rc, theme);
 
         rc.rectangle(4, 4, this.width - 8, this.height - 8, {
-            seed: 42 + this.sketchbook.boilSeedOffset,
-            roughness: 1.6,
-            bowing: 1.8,
+            seed: 42,
+            roughness: 1.4,
+            bowing: 1.4,
             stroke: theme.borderStroke,
             strokeWidth: 3
         });

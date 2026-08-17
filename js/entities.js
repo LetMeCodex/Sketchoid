@@ -1,7 +1,6 @@
 /**
- * SKETCHOID Game Entities & Customized Skins (Progression & Identity Upgrade)
- * Customizable Paddle Skins (Metric Ruler, Calligraphy Quill, Golden Stylus)
- * and Dynamic Ball Trails (Charcoal, Rainbow Spectrum, Quantum Nebula, Electric Neon)
+ * SKETCHOID Game Entities & Customized Skins (60 FPS Performance Optimized)
+ * High-performance Paddle Skins, Ball Trails, and Optimized Material Rendering
  */
 
 class Paddle {
@@ -67,11 +66,11 @@ class Paddle {
     }
 
     triggerSquash(impactOffset = 0) {
-        this.scaleY = 0.52;
-        this.scaleX = 1.42;
+        this.scaleY = 0.58;
+        this.scaleX = 1.35;
         this.springVelY = 0;
         this.springVelX = 0;
-        this.tilt += impactOffset * 0.16;
+        this.tilt += impactOffset * 0.12;
     }
 
     update(dt, inputState) {
@@ -98,11 +97,11 @@ class Paddle {
             }
         }
 
-        const targetTilt = Math.max(-0.16, Math.min(0.16, this.vx * 0.02));
+        const targetTilt = Math.max(-0.14, Math.min(0.14, this.vx * 0.018));
         this.tilt += (targetTilt - this.tilt) * 0.25;
 
-        const k = 0.26;
-        const damping = 0.72;
+        const k = 0.28;
+        const damping = 0.70;
         const forceX = (this.targetScaleX - this.scaleX) * k;
         this.springVelX = (this.springVelX + forceX) * damping;
         this.scaleX += this.springVelX;
@@ -218,9 +217,7 @@ class Paddle {
 
         const skin = (window.progression && window.progression.data.selectedSkin) || 'classic';
 
-        // 1. Render Specific Paddle Skin
         if (skin === 'ruler') {
-            // Architect Metric Wooden Ruler
             rc.rectangle(-halfW, -halfH, w, h, {
                 seed: this.seed,
                 roughness: 1.1,
@@ -230,55 +227,48 @@ class Paddle {
                 fillStyle: 'solid'
             });
 
-            // Metric tick marks
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1.2;
             const numTicks = 12;
             const tickSpacing = (w - 16) / numTicks;
+            ctx.beginPath();
             for (let i = 0; i <= numTicks; i++) {
                 const tx = -halfW + 8 + i * tickSpacing;
                 const isMajor = i % 3 === 0;
-                rc.line(tx, -halfH, tx, -halfH + (isMajor ? 7 : 4), {
-                    seed: this.seed + i,
-                    stroke: '#78350f',
-                    strokeWidth: isMajor ? 1.5 : 1.0
-                });
+                ctx.moveTo(tx, -halfH);
+                ctx.lineTo(tx, -halfH + (isMajor ? 7 : 4));
             }
+            ctx.stroke();
         } else if (skin === 'gold') {
-            // 24K Golden Stylus
             rc.rectangle(-halfW, -halfH, w, h, {
                 seed: this.seed,
                 roughness: 1.2,
                 stroke: '#b45309',
                 strokeWidth: 2.2,
                 fill: '#fbbf24',
-                fillStyle: 'cross-hatch',
-                fillWeight: 1.8,
-                hachureGap: 3
-            });
-            rc.circle(0, 0, 10, {
-                seed: this.seed + 1,
-                stroke: '#ffffff',
-                fill: '#ffffff',
                 fillStyle: 'solid'
             });
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
+            ctx.fill();
         } else if (skin === 'quill') {
-            // Calligraphy Quill
             rc.ellipse(0, 0, w, h * 1.1, {
                 seed: this.seed,
-                roughness: 1.5,
+                roughness: 1.4,
                 stroke: '#1e293b',
                 strokeWidth: 2,
                 fill: '#f8fafc',
-                fillStyle: 'zigzag'
-            });
-            // Gold Nib
-            rc.polygon([[-halfW, 0], [-halfW - 8, -4], [-halfW - 8, 4]], {
-                seed: this.seed + 2,
-                stroke: '#b45309',
-                fill: '#fbbf24',
                 fillStyle: 'solid'
             });
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(-halfW, 0);
+            ctx.lineTo(-halfW - 8, -4);
+            ctx.lineTo(-halfW - 8, 4);
+            ctx.closePath();
+            ctx.fill();
         } else {
-            // Classic Sketch Paddle
             const paddleFill = this.hasLaser 
                 ? (this.laserOverheated ? '#991b1b' : '#f43f5e') 
                 : (this.hasWide ? '#3b82f6' : theme.paddleFill);
@@ -296,58 +286,45 @@ class Paddle {
                 hachureGap: 5
             });
 
-            rc.ellipse(0, 0, 18, 10, {
-                seed: this.seed + 1,
-                roughness: 1.2,
-                stroke: theme.paddleStroke,
-                strokeWidth: 1.5,
-                fill: '#ffffff',
-                fillStyle: 'solid'
-            });
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = theme.paddleStroke;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
         }
 
-        // Laser Turrets & Heat Gauge
         if (this.hasLaser) {
             const turretColor = this.laserOverheated ? '#7f1d1d' : '#e11d48';
-            rc.rectangle(-halfW + 4, -halfH - 10 + this.laserTurretRecoilLeft, 6, 12, {
-                seed: this.seed + 2,
-                roughness: 1.2,
-                stroke: turretColor,
-                strokeWidth: 2,
-                fill: this.laserOverheated ? '#fca5a5' : '#ffe4e6',
-                fillStyle: 'solid'
-            });
-            rc.rectangle(halfW - 10, -halfH - 10 + this.laserTurretRecoilRight, 6, 12, {
-                seed: this.seed + 3,
-                roughness: 1.2,
-                stroke: turretColor,
-                strokeWidth: 2,
-                fill: this.laserOverheated ? '#fca5a5' : '#ffe4e6',
-                fillStyle: 'solid'
-            });
+            ctx.fillStyle = this.laserOverheated ? '#fca5a5' : '#ffe4e6';
+            ctx.strokeStyle = turretColor;
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(-halfW + 4, -halfH - 10 + this.laserTurretRecoilLeft, 6, 12);
+            ctx.strokeRect(-halfW + 4, -halfH - 10 + this.laserTurretRecoilLeft, 6, 12);
+            ctx.fillRect(halfW - 10, -halfH - 10 + this.laserTurretRecoilRight, 6, 12);
+            ctx.strokeRect(halfW - 10, -halfH - 10 + this.laserTurretRecoilRight, 6, 12);
 
             if (this.laserHeat > 0) {
                 const heatWidth = (w * 0.7) * (this.laserHeat / 100);
-                rc.line(-w * 0.35, halfH + 4, -w * 0.35 + heatWidth, halfH + 4, {
-                    seed: this.seed + 6,
-                    stroke: this.laserOverheated ? '#ef4444' : '#fbbf24',
-                    strokeWidth: 3
-                });
+                ctx.strokeStyle = this.laserOverheated ? '#ef4444' : '#fbbf24';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-w * 0.35, halfH + 4);
+                ctx.lineTo(-w * 0.35 + heatWidth, halfH + 4);
+                ctx.stroke();
             }
         }
 
-        // Wide Paddle Wings
         if (this.hasWide) {
-            rc.line(-halfW, 0, -halfW + 14, 0, {
-                seed: this.seed + 4,
-                stroke: '#2563eb',
-                strokeWidth: 3
-            });
-            rc.line(halfW - 14, 0, halfW, 0, {
-                seed: this.seed + 5,
-                stroke: '#2563eb',
-                strokeWidth: 3
-            });
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-halfW, 0);
+            ctx.lineTo(-halfW + 14, 0);
+            ctx.moveTo(halfW - 14, 0);
+            ctx.lineTo(halfW, 0);
+            ctx.stroke();
         }
 
         ctx.restore();
@@ -381,7 +358,7 @@ class Ball {
         this.vy = vy;
 
         this.trail = [];
-        this.maxTrail = 9;
+        this.maxTrail = 6;
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
@@ -406,11 +383,11 @@ class Ball {
 
     triggerImpactSquash(impactNormalX, impactNormalY) {
         if (Math.abs(impactNormalY) > Math.abs(impactNormalX)) {
-            this.scaleY = 0.52;
-            this.scaleX = 1.38;
+            this.scaleY = 0.58;
+            this.scaleX = 1.30;
         } else {
-            this.scaleX = 0.52;
-            this.scaleY = 1.38;
+            this.scaleX = 0.58;
+            this.scaleY = 1.30;
         }
         this.springVelX = 0;
         this.springVelY = 0;
@@ -455,21 +432,21 @@ class Ball {
             this.vx = Math.abs(this.vx);
             this.triggerImpactSquash(1, 0);
             window.soundEngine?.playWallTick();
-            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 4);
+            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 3);
         }
         if (this.x + this.radius >= canvasWidth) {
             this.x = canvasWidth - this.radius;
             this.vx = -Math.abs(this.vx);
             this.triggerImpactSquash(-1, 0);
             window.soundEngine?.playWallTick();
-            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 4);
+            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 3);
         }
         if (this.y - this.radius <= 0) {
             this.y = this.radius;
             this.vy = Math.abs(this.vy);
             this.triggerImpactSquash(0, 1);
             window.soundEngine?.playWallTick();
-            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 4);
+            window.particleSystem?.createLaserSparks(this.x, this.y, '#94a3b8', 3);
         }
 
         this.enforceVelocityBounds();
@@ -489,7 +466,7 @@ class Ball {
             return;
         }
 
-        this.trail.unshift({ x: this.x, y: this.y, alpha: 1.0, speed: this.speed });
+        this.trail.unshift({ x: this.x, y: this.y });
         if (this.trail.length > this.maxTrail) this.trail.pop();
 
         if (this.isFireball) {
@@ -497,9 +474,9 @@ class Ball {
             if (this.fireballTimer <= 0) this.isFireball = false;
         }
 
-        const k = 0.28;
-        const damping = 0.70;
-        const speedStretch = Math.min(1.30, 1.0 + (this.speed - this.baseSpeed) * 0.028);
+        const k = 0.30;
+        const damping = 0.68;
+        const speedStretch = Math.min(1.25, 1.0 + (this.speed - this.baseSpeed) * 0.024);
         const targetSx = 1.0 / speedStretch;
         const targetSy = speedStretch;
 
@@ -512,7 +489,7 @@ class Ball {
         this.scaleY += this.springVelY;
 
         this.seedTimer += dt;
-        if (this.seedTimer > 0.06) {
+        if (this.seedTimer > 0.08) {
             this.seedTimer = 0;
             this.seed = (this.seed + 199) % 10000;
         }
@@ -523,10 +500,10 @@ class Ball {
 
         const trailType = (window.progression && window.progression.data.selectedTrail) || 'charcoal';
 
-        // Render Motion Trails based on selected Trail Skin
+        // Fast Motion Trails
         for (let i = 0; i < this.trail.length; i++) {
             const t = this.trail[i];
-            const trailAlpha = (1 - i / this.trail.length) * 0.55;
+            const trailAlpha = (1 - i / this.trail.length) * 0.45;
             const r = this.radius * (1 - i / (this.trail.length * 1.35));
             
             if (this.isFireball) {
@@ -558,18 +535,17 @@ class Ball {
 
         rc.circle(0, 0, ballRadius * 2, {
             seed: this.seed,
-            roughness: 1.3,
-            bowing: 1.6,
+            roughness: 1.2,
+            bowing: 1.4,
             stroke: ballStroke,
             strokeWidth: 2,
             fill: ballColor,
-            fillStyle: this.isFireball ? 'zigzag' : 'solid',
-            fillWeight: 2
+            fillStyle: 'solid'
         });
 
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.32, 0, Math.PI * 2);
+        ctx.arc(-ballRadius * 0.35, -ballRadius * 0.35, ballRadius * 0.30, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -655,7 +631,7 @@ class Brick {
         }
 
         this.hp -= dmg;
-        this.hitFlashTimer = 0.16;
+        this.hitFlashTimer = 0.12;
 
         const ratio = this.hp / this.maxHp;
         if (ratio >= 0.75) this.damageState = 'DAMAGED';
@@ -668,13 +644,13 @@ class Brick {
         }
 
         if (this.hp > 0 && this.hp < this.maxHp) {
-            const crackCount = (this.maxHp - this.hp) * 3;
+            const crackCount = Math.min(6, (this.maxHp - this.hp) * 2);
             this.crackLines = [];
             for (let i = 0; i < crackCount; i++) {
                 const sx = this.x + Math.random() * this.width;
                 const sy = this.y + Math.random() * this.height;
-                const ex = sx + (Math.random() - 0.5) * (this.width * 0.7);
-                const ey = sy + (Math.random() - 0.5) * (this.height * 0.7);
+                const ex = sx + (Math.random() - 0.5) * (this.width * 0.6);
+                const ey = sy + (Math.random() - 0.5) * (this.height * 0.6);
                 this.crackLines.push({ sx, sy, ex, ey });
             }
         }
@@ -709,46 +685,36 @@ class Brick {
 
         let customSeed = this.seed;
         if (this.typeKey === 'GOLD') {
-            customSeed = (this.seed + Math.floor(Date.now() / 150)) % 1000;
+            customSeed = (this.seed + Math.floor(Date.now() / 250)) % 1000;
         }
 
         rc.rectangle(this.x, this.y, this.width, this.height, {
             seed: customSeed,
-            roughness: this.damageState === 'FRACTURED' ? 2.2 : 1.5,
-            bowing: 1.8,
+            roughness: 1.3,
+            bowing: 1.4,
             stroke: strokeColor,
             strokeWidth: 2,
             fill: color,
             fillStyle: fillStyle,
-            fillWeight: 1.6,
+            fillWeight: 1.5,
             hachureAngle: this.typeKey === 'SAPPHIRE' ? 45 : (this.typeKey === 'RUBY' ? -45 : 30),
             hachureGap: 4
         });
 
-        if (this.typeKey === 'AMETHYST' && this.armorPlates > 0) {
-            for (let p = 0; p < this.armorPlates; p++) {
-                const px = this.x + 4 + p * (this.width / 4 - 2);
-                rc.rectangle(px, this.y + 3, this.width / 4 - 4, this.height - 6, {
-                    seed: customSeed + p * 10,
-                    roughness: 1.2,
-                    stroke: '#581c87',
-                    strokeWidth: 1.5,
-                    fill: '#c084fc',
-                    fillStyle: 'solid'
-                });
-            }
-        }
-
+        // Fast canvas crack lines (no rough.js line overhead)
         if (this.crackLines.length > 0) {
-            for (const crack of this.crackLines) {
-                rc.line(crack.sx, crack.sy, crack.ex, crack.ey, {
-                    seed: customSeed + 20,
-                    stroke: theme.inkColor,
-                    strokeWidth: 1.8
-                });
+            ctx.strokeStyle = theme.inkColor;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let i = 0; i < this.crackLines.length; i++) {
+                const crack = this.crackLines[i];
+                ctx.moveTo(crack.sx, crack.sy);
+                ctx.lineTo(crack.ex, crack.ey);
             }
+            ctx.stroke();
         }
 
+        // Fast icon draw
         if (this.typeKey === 'GOLD') {
             ctx.fillStyle = '#b45309';
             ctx.font = 'bold 12px Fredoka, sans-serif';
@@ -767,12 +733,6 @@ class Brick {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('◆', this.x + this.width / 2, this.y + this.height / 2 + 1);
-        } else if (this.typeKey === 'AMBER' && this.damageState !== 'INTACT') {
-            ctx.fillStyle = '#78350f';
-            ctx.font = 'bold 10px Fredoka, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('⚡', this.x + this.width / 2, this.y + this.height / 2 + 1);
         }
 
         ctx.restore();
@@ -787,7 +747,6 @@ class LaserBeam {
         this.height = 16;
         this.vy = -16;
         this.isAlive = true;
-        this.seed = Math.floor(Math.random() * 1000);
     }
 
     update(dt) {
@@ -800,14 +759,11 @@ class LaserBeam {
     draw(ctx, rc, theme) {
         if (!this.isAlive) return;
         ctx.save();
-        rc.rectangle(this.x - this.width / 2, this.y, this.width, this.height, {
-            seed: this.seed,
-            roughness: 1.2,
-            stroke: '#ff0055',
-            strokeWidth: 2,
-            fill: '#ff3366',
-            fillStyle: 'solid'
-        });
+        ctx.fillStyle = '#ff3366';
+        ctx.strokeStyle = '#ff0055';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(this.x - this.width / 2, this.y, this.width, this.height);
+        ctx.strokeRect(this.x - this.width / 2, this.y, this.width, this.height);
         ctx.restore();
     }
 }
@@ -854,7 +810,7 @@ class PowerupCapsule {
         
         rc.ellipse(this.x, this.y, this.width, this.height, {
             seed: this.seed,
-            roughness: 1.3,
+            roughness: 1.2,
             stroke: this.info.stroke,
             strokeWidth: 2,
             fill: this.info.color,
@@ -891,7 +847,7 @@ class SafetyNet {
         this.springVel = 12;
         this.uses--;
         window.soundEngine?.playTrampolineBounce();
-        window.particleSystem?.addShake(4, 0.2);
+        window.particleSystem?.addShake(3, 0.15);
         if (this.uses <= 0) {
             this.isActive = false;
         }
@@ -913,19 +869,11 @@ class SafetyNet {
         const curY = this.y + this.springY;
         rc.line(0, curY, this.canvasWidth, curY, {
             seed: this.seed,
-            roughness: 2.0,
-            bowing: 2.5,
+            roughness: 1.6,
+            bowing: 2.0,
             stroke: '#10b981',
-            strokeWidth: 4
+            strokeWidth: 3.5
         });
-
-        for (let x = 20; x < this.canvasWidth; x += 40) {
-            rc.line(x - 10, curY + 6, x + 10, curY - 6, {
-                seed: this.seed + x,
-                stroke: '#047857',
-                strokeWidth: 2
-            });
-        }
 
         ctx.restore();
     }

@@ -1,6 +1,6 @@
 /**
- * SKETCHOID Physics Engine & Collision Pipeline (Phase 3 Upgrade)
- * SpatialGrid Broadphase, Narrowphase Swept Solvers, Interactive Geometry Resolvers, Boss Collisions, and Near-Miss Detection
+ * SKETCHOID Physics Engine & Collision Pipeline (Optimized 60FPS Performance)
+ * Throttled Hit-Stop, SpatialGrid Broadphase, Narrowphase Swept Solvers, and Interactive Geometry
  */
 
 class SpatialGrid {
@@ -60,10 +60,20 @@ class SpatialGrid {
 class HitStopManager {
     constructor() {
         this.freezeTime = 0;
+        this.lastTriggerTime = 0;
+        this.minInterval = 0.12; // Minimum 120ms between hit-stops to prevent frame stuttering
     }
 
     trigger(durationMs) {
-        this.freezeTime = Math.max(this.freezeTime, durationMs / 1000);
+        const now = performance.now() / 1000;
+        // Throttle triggers so multiple rapid hits don't stack freeze time
+        if (now - this.lastTriggerTime < this.minInterval) {
+            return;
+        }
+        this.lastTriggerTime = now;
+        // Cap max freeze time to 30ms (crisp tactile micro-pause, no lag feeling)
+        const cappedDuration = Math.min(30, durationMs);
+        this.freezeTime = cappedDuration / 1000;
     }
 
     update(dt) {
@@ -78,7 +88,7 @@ class HitStopManager {
 class NearMissDetector {
     constructor() {
         this.lastNearMissTime = 0;
-        this.cooldown = 0.35;
+        this.cooldown = 0.45;
     }
 
     testPaddleNearMiss(ball, paddle, timeNow) {
@@ -165,15 +175,12 @@ class PhysicsWorld {
             const ball = balls[i];
             if (ball.isStuck) continue;
 
-            // Ball physics step (wall bounce, spin Magnus curve)
             ball.physicsStep(subDt, this.width, this.height);
 
-            // Interactive Geometry Collisions (Windmills, Portals, Gravity)
             if (geometryManager) {
                 geometryManager.handleBallCollisions(ball);
             }
 
-            // Ball vs Safety Net Trampoline
             if (safetyNet.isActive && ball.y + ball.radius >= safetyNet.y) {
                 ball.y = safetyNet.y - ball.radius;
                 ball.vy = -Math.abs(ball.vy);
@@ -182,13 +189,11 @@ class PhysicsWorld {
                 this.emit('safetyNetBounce', { ball });
             }
 
-            // Ball vs Paddle Near-Miss Test
             const paddleNearMiss = this.nearMiss.testPaddleNearMiss(ball, paddle, timeNow);
             if (paddleNearMiss) {
                 this.emit('nearMiss', paddleNearMiss);
             }
 
-            // Ball vs Paddle Precision Deflection
             if (ball.vy > 0 &&
                 ball.y + ball.radius >= paddle.y &&
                 ball.y - ball.radius <= paddle.y + paddle.height &&
@@ -214,7 +219,6 @@ class PhysicsWorld {
                 });
             }
 
-            // Ball vs Boss Collision
             if (boss && boss.isAlive) {
                 const bossHit = boss.testCollision(ball);
                 if (bossHit) {
@@ -232,7 +236,6 @@ class PhysicsWorld {
                 }
             }
 
-            // Ball vs Bricks via SpatialGrid Broadphase
             const candidateBricks = this.spatialGrid.queryCircle(ball.x, ball.y, ball.radius + 6);
             for (const brick of candidateBricks) {
                 if (!brick.isAlive) continue;
@@ -278,7 +281,6 @@ class PhysicsWorld {
         for (let i = lasers.length - 1; i >= 0; i--) {
             const laser = lasers[i];
             
-            // Check Boss
             if (boss && boss.isAlive &&
                 laser.x >= boss.x - boss.width / 2 && laser.x <= boss.x + boss.width / 2 &&
                 laser.y >= boss.y - boss.height / 2 && laser.y <= boss.y + boss.height / 2) {
@@ -289,7 +291,6 @@ class PhysicsWorld {
                 continue;
             }
 
-            // Check Bricks
             const candidateBricks = this.spatialGrid.queryCircle(laser.x, laser.y, 16);
             for (const brick of candidateBricks) {
                 if (brick.isAlive &&
