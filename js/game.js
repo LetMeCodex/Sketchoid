@@ -1,6 +1,6 @@
 /**
- * SKETCHOID Main Game Engine & Controller (Phase 2 Full Architecture)
- * Decoupled PhysicsWorld, Camera2D Pipeline, Combo 2.0 Style Scoring, Near-Miss, Hit-Stop, and Material Systems
+ * SKETCHOID Main Game Engine & Controller (Phase 3 Full Universe)
+ * Living Sketchbook Renderer, Dynamic Stage Evolution, Interactive Geometry, and Boss Battles (Arch-Pencil)
  */
 
 const THEMES = {
@@ -53,7 +53,6 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // Initialize Rough.js canvas safely
         try {
             if (typeof rough !== 'undefined' && rough.canvas) {
                 this.rc = rough.canvas(this.canvas);
@@ -76,13 +75,17 @@ class Game {
         this.currentThemeKey = 'blueprint';
         this.theme = THEMES[this.currentThemeKey];
 
-        // Decoupled 2D Camera & PhysicsWorld
+        // Decoupled Phase 3 Engines
         this.camera = new Camera2D(this.width, this.height);
         this.physicsWorld = new PhysicsWorld(this.width, this.height);
+        this.sketchbook = new SketchbookWorld(this.width, this.height);
+        this.geometryManager = new InteractiveGeometryManager();
+        this.boss = null;
+
         this.setupPhysicsEventBus();
 
         // Game State
-        this.state = 'MENU'; // MENU, PLAYING, PAUSED, LEVEL_CLEAR, GAME_OVER, VICTORY
+        this.state = 'MENU';
         this.score = 0;
         this.highScore = parseInt(localStorage.getItem('sketchoid_highscore') || localStorage.getItem('neo_arkanoid_highscore') || '0', 10);
         this.lives = 3;
@@ -96,7 +99,6 @@ class Game {
         this.maxComboStreak = 0;
         this.comboMultiplier = 1;
         this.lastHitTime = 0;
-        this.styleStreak = 0;
         this.isCrystalFrenzy = false;
         this.crystalFrenzyTimer = 0;
 
@@ -127,8 +129,7 @@ class Game {
 
         // Frame timing & fixed sub-stepping accumulator
         this.lastTime = performance.now();
-        this.physicsAccumulator = 0;
-        this.fixedTimeStep = 1 / 120; // 120Hz deterministic physics sub-step
+        this.fixedTimeStep = 1 / 120;
 
         // Initial preview load
         this.loadLevel(0);
@@ -186,13 +187,36 @@ class Game {
                 ctx.lineWidth = opts.strokeWidth || 2;
                 ctx.stroke();
                 ctx.restore();
+            },
+            arc: (x, y, w, h, start, end, closed, opts = {}) => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x, y, w / 2, start, end);
+                ctx.strokeStyle = opts.stroke || '#fff';
+                ctx.lineWidth = opts.strokeWidth || 2;
+                ctx.stroke();
+                ctx.restore();
+            },
+            polygon: (points, opts = {}) => {
+                ctx.save();
+                ctx.beginPath();
+                if (points.length > 0) {
+                    ctx.moveTo(points[0][0], points[0][1]);
+                    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+                    ctx.closePath();
+                }
+                if (opts.fill) {
+                    ctx.fillStyle = opts.fill;
+                    ctx.fill();
+                }
+                ctx.strokeStyle = opts.stroke || '#fff';
+                ctx.lineWidth = opts.strokeWidth || 2;
+                ctx.stroke();
+                ctx.restore();
             }
         };
     }
 
-    /**
-     * Physics Gameplay Event Bus
-     */
     setupPhysicsEventBus() {
         this.physicsWorld.onEvent = (type, payload) => {
             if (this.state !== 'PLAYING') return;
@@ -200,11 +224,10 @@ class Game {
             const timeNow = performance.now() / 1000;
 
             if (type === 'brickHit') {
-                const { ball, brick, hitResult, destroyed, isFireball } = payload;
+                const { ball, brick, hitResult, destroyed } = payload;
                 const dtSinceLastHit = timeNow - this.lastHitTime;
                 this.lastHitTime = timeNow;
 
-                // 1. Combo 2.0 Style Rating
                 this.comboStreak++;
                 if (this.comboStreak > this.maxComboStreak) {
                     this.maxComboStreak = this.comboStreak;
@@ -214,22 +237,17 @@ class Game {
                 let styleMultiplier = 1.0;
                 let styleCallout = null;
 
-                // Quick Hit bonus (within 350ms)
                 if (dtSinceLastHit > 0 && dtSinceLastHit < 0.35) {
                     styleMultiplier *= 1.3;
                     styleCallout = 'QUICK HIT!';
                 }
-
-                // Multiball simultaneous bonus
                 if (this.balls.length >= 3) {
                     styleMultiplier *= 1.4;
                     styleCallout = styleCallout || 'MULTI HIT!';
                 }
 
-                // Speed bonus
                 const speedBonus = 1.0 + Math.max(0, (ball.speed - ball.baseSpeed) * 0.05);
 
-                // Crystal Frenzy Mode activation
                 if (this.comboStreak >= 12 && !this.isCrystalFrenzy) {
                     this.isCrystalFrenzy = true;
                     this.crystalFrenzyTimer = 8;
@@ -237,36 +255,29 @@ class Game {
                     window.particleSystem?.addFloatingText('🔥 CRYSTAL FRENZY! (3x)', this.width / 2, this.height / 2 - 40, '#fbbf24', 1.8, true);
                 }
 
-                if (this.isCrystalFrenzy) {
-                    styleMultiplier *= 1.5;
-                }
+                if (this.isCrystalFrenzy) styleMultiplier *= 1.5;
 
-                // Chime playback
                 window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
 
-                // 2. Material-Specific Physics Behaviors
+                // Material Behaviors
                 if (brick.typeKey === 'SAPPHIRE') {
-                    // Trajectory resonance: slight ball acceleration
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.35);
                     window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#38bdf8', 6);
                 } else if (brick.typeKey === 'EMERALD') {
-                    // Speed catalyst
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.5);
                     window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#10b981', 6);
                 } else if (brick.typeKey === 'AMBER' && brick.damageState === 'CRACKED') {
-                    // Amber structural fracture: crack adjacent amber bricks
                     this.propagateAmberFracture(brick);
                 }
 
-                // 3. Destruction vs Damage
                 if (destroyed) {
                     const earnedPts = Math.round(brick.score * this.comboMultiplier * speedBonus * styleMultiplier);
                     this.addScore(earnedPts);
 
                     window.soundEngine?.playExplosion(brick.isExplosive);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
+                    this.sketchbook.addInkSplatter(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.strokeColor, 12);
 
-                    // Camera juice & Hit-Stop
                     if (brick.typeKey === 'AMETHYST') {
                         this.physicsWorld.hitStop.trigger(50);
                         this.camera.addTrauma(0.35);
@@ -280,7 +291,6 @@ class Game {
                         this.camera.addTrauma(0.12);
                     }
 
-                    // Floating text
                     const comboText = styleCallout ? `${styleCallout} +${earnedPts}` : (this.comboMultiplier > 1 ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`);
                     window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, styleCallout ? 1.35 : 1.0, !!styleCallout);
 
@@ -291,16 +301,37 @@ class Game {
 
                     this.checkLevelClear();
                 } else {
-                    // Damaged state juice
                     this.camera.punch(-hitResult.normalX, -hitResult.normalY, 3.5);
                     window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, brick.config.color, 4);
                 }
+                this.updateHUD();
+            } else if (type === 'bossHit') {
+                const { boss, ball, hitResult, defeated } = payload;
+                this.physicsWorld.hitStop.trigger(45);
+                this.camera.addTrauma(0.4);
+                this.camera.impactZoom(1.035);
+                window.soundEngine?.playExplosion(false);
+                window.soundEngine?.playBrickChime(15, 'amethyst');
 
+                const hitX = hitResult ? hitResult.contactX : boss.x;
+                const hitY = hitResult ? hitResult.contactY : boss.y;
+
+                window.particleSystem?.createLaserSparks(hitX, hitY, '#fbbf24', 12);
+                this.sketchbook.addInkSplatter(hitX, hitY, '#78350f', 16);
+                this.addScore(250);
+                window.particleSystem?.addFloatingText('+250 BOSS HIT!', hitX, hitY - 20, '#fbbf24', 1.4, true);
+
+                if (defeated) {
+                    this.camera.flash('#fbbf24', 0.5);
+                    this.camera.impactZoom(1.08);
+                    window.soundEngine?.playLevelClear();
+                    this.addScore(5000);
+                    window.particleSystem?.addFloatingText('🏆 ARCH-PENCIL VANQUISHED! +5000', this.width / 2, this.height / 2 - 30, '#fbbf24', 2.0, true);
+                    this.checkLevelClear();
+                }
                 this.updateHUD();
             } else if (type === 'paddleHit') {
                 const { ball, deflection, isEdgeFlick, swingVelocity } = payload;
-                
-                // Rebound juice
                 window.soundEngine?.playPaddleBoing(Math.abs(deflection.offset));
                 window.particleSystem?.createPaddleHitSparks(ball.x, this.paddle.y, swingVelocity);
                 this.camera.punch(deflection.vx * 0.4, 4, isEdgeFlick ? 6 : 3.5);
@@ -312,13 +343,11 @@ class Game {
                     window.particleSystem?.addFloatingText('PERFECT REBOUND! +150', ball.x, this.paddle.y - 25, '#38bdf8', 1.4, true);
                 }
 
-                // Reset combo streak on paddle catch
                 this.comboStreak = 0;
                 this.comboMultiplier = 1;
                 this.updateHUD();
             } else if (type === 'nearMiss') {
-                // Near-Miss Style Reward
-                const { x, y, type: nearType } = payload;
+                const { x, y } = payload;
                 this.addScore(50);
                 this.camera.addTrauma(0.08);
                 window.soundEngine?.playWallTick();
@@ -334,26 +363,19 @@ class Game {
                     window.soundEngine?.playExplosion(brick.isExplosive);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
                     window.particleSystem?.addFloatingText(`+${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.0);
-                    
                     if (brick.isExplosive) this.triggerRubyNuke(brick);
-                    if (brick.dropsPowerup) {
-                        this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
-                    }
+                    if (brick.dropsPowerup) this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                     this.checkLevelClear();
                 } else {
                     window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
                 }
                 this.updateHUD();
             } else if (type === 'powerupCollect') {
-                const { type: powType } = payload;
-                this.applyPowerup(powType);
+                this.applyPowerup(payload.type);
             }
         };
     }
 
-    /**
-     * Amber Material Feature: Fracture Weakpoint Propagation
-     */
     propagateAmberFracture(amberBrick) {
         const cx = amberBrick.x + amberBrick.width / 2;
         const cy = amberBrick.y + amberBrick.height / 2;
@@ -364,7 +386,7 @@ class Game {
                 const by = b.y + b.height / 2;
                 const dist = Math.hypot(bx - cx, by - cy);
                 if (dist < 60 && b.damageState === 'INTACT') {
-                    b.takeDamage(1); // Weaken adjacent amber
+                    b.takeDamage(1);
                     window.particleSystem?.createLaserSparks(b.x + b.width / 2, b.y + b.height / 2, '#f59e0b', 3);
                 }
             }
@@ -381,9 +403,7 @@ class Game {
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 0) {
-                this.handleActionTrigger();
-            }
+            if (e.button === 0) this.handleActionTrigger();
         });
 
         this.canvas.addEventListener('touchmove', (e) => {
@@ -416,30 +436,17 @@ class Game {
                 this.inputState.space = true;
                 this.handleActionTrigger();
             }
-            if (e.code === 'KeyP' || e.code === 'Escape') {
-                this.togglePause();
-            }
-            if (e.code === 'KeyM') {
-                this.toggleMute();
-            }
-            if (e.code === 'KeyT') {
-                this.cycleTheme();
-            }
+            if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
+            if (e.code === 'KeyM') this.toggleMute();
+            if (e.code === 'KeyT') this.cycleTheme();
         });
 
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
-                this.inputState.left = false;
-            }
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
-                this.inputState.right = false;
-            }
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-                this.inputState.space = false;
-            }
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.inputState.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') this.inputState.right = false;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') this.inputState.space = false;
         });
 
-        // UI Button Bindings
         document.getElementById('btnStart')?.addEventListener('click', () => this.startGame(0));
         document.getElementById('btnEndless')?.addEventListener('click', () => this.startEndless());
         document.getElementById('btnResume')?.addEventListener('click', () => this.togglePause());
@@ -451,9 +458,7 @@ class Game {
     }
 
     handleActionTrigger() {
-        if (window.soundEngine) {
-            window.soundEngine.init();
-        }
+        if (window.soundEngine) window.soundEngine.init();
 
         if (this.state === 'MENU') {
             this.startGame(0);
@@ -530,11 +535,8 @@ class Game {
     }
 
     restartCurrentGame() {
-        if (this.isEndless) {
-            this.startEndless();
-        } else {
-            this.startGame(this.levelIndex);
-        }
+        if (this.isEndless) this.startEndless();
+        else this.startGame(this.levelIndex);
     }
 
     showMenu() {
@@ -559,9 +561,7 @@ class Game {
         if (window.soundEngine) {
             const isMuted = window.soundEngine.toggleMute();
             const muteBtn = document.getElementById('btnMute');
-            if (muteBtn) {
-                muteBtn.innerHTML = isMuted ? '🔇 Unmute' : '🔊 Sound';
-            }
+            if (muteBtn) muteBtn.innerHTML = isMuted ? '🔇 Unmute' : '🔊 Sound';
         }
     }
 
@@ -573,9 +573,7 @@ class Game {
 
         document.body.className = `theme-${this.currentThemeKey}`;
         const themeBtn = document.getElementById('btnTheme');
-        if (themeBtn) {
-            themeBtn.innerText = `🎨 ${this.theme.name}`;
-        }
+        if (themeBtn) themeBtn.innerText = `🎨 ${this.theme.name}`;
     }
 
     loadLevel(index) {
@@ -583,6 +581,8 @@ class Game {
         this.lasers = [];
         this.powerups = [];
         this.safetyNet.isActive = false;
+        this.geometryManager.clear();
+        this.boss = null;
 
         this.paddle.reset(this.width, this.height);
         this.balls = [new Ball(this.paddle.x + this.paddle.width / 2, this.paddle.y - 12)];
@@ -594,13 +594,41 @@ class Game {
             this.currentLevel = levelData;
         }
 
+        // Set Sketchbook Stage Evolution
+        this.sketchbook.setStage(this.currentLevel.stageNumber || 1);
+
+        // Load Interactive Level Geometry
+        if (this.currentLevel.geometry) {
+            if (this.currentLevel.geometry.windmills) {
+                for (const w of this.currentLevel.geometry.windmills) {
+                    this.geometryManager.windmills.push(new RotatingWindmill(w.x, w.y, w.length, w.speed, w.color));
+                }
+            }
+            if (this.currentLevel.geometry.portals) {
+                for (const p of this.currentLevel.geometry.portals) {
+                    this.geometryManager.portals.push(new InkPortal(p.entryX, p.entryY, p.exitX, p.exitY, p.colorA, p.colorB));
+                }
+            }
+            if (this.currentLevel.geometry.vortexes) {
+                for (const v of this.currentLevel.geometry.vortexes) {
+                    this.geometryManager.vortexes.push(new GravityVortex(v.x, v.y, v.strength, v.radius, v.color));
+                }
+            }
+        }
+
+        // Instantiate Boss if present
+        if (this.currentLevel.hasBoss) {
+            this.boss = new ArchPencilBoss(this.width, this.height);
+        }
+
+        // Build bricks matrix
         this.bricks = [];
         const rows = this.currentLevel.rows;
         const totalRows = rows.length;
         const totalCols = rows[0].length;
 
         const brickMargin = 5;
-        const topOffset = 70;
+        const topOffset = this.boss ? 150 : 70; // Lower brick placement if Boss is above
         const sidePadding = 40;
         const totalUsableWidth = this.width - sidePadding * 2;
         const brickW = (totalUsableWidth - (totalCols - 1) * brickMargin) / totalCols;
@@ -663,7 +691,9 @@ class Game {
 
     checkLevelClear() {
         const remainingDestructible = this.bricks.filter(b => b.isAlive && !b.unbreakable);
-        if (remainingDestructible.length === 0 && this.state === 'PLAYING') {
+        const bossDefeated = !this.boss || !this.boss.isAlive;
+
+        if (remainingDestructible.length === 0 && bossDefeated && this.state === 'PLAYING') {
             this.state = 'LEVEL_CLEAR';
             window.soundEngine?.playLevelClear();
             this.camera.impactZoom(1.06);
@@ -765,20 +795,15 @@ class Game {
             this.paddle.laserHeat = 0;
             this.paddle.laserOverheated = false;
         } else if (type === 'fireball') {
-            for (const ball of this.balls) {
-                ball.setFireball(10);
-            }
+            for (const ball of this.balls) ball.setFireball(10);
         } else if (type === 'shield') {
             this.safetyNet.activate(2);
         } else if (type === 'slowmo') {
             this.slowmoTimer = 8;
-            this.timeScale = 0.35; // Matrix slow-motion
+            this.timeScale = 0.35;
         }
     }
 
-    /**
-     * Ruby Explosive Chain Reaction
-     */
     triggerRubyNuke(centerBrick) {
         window.soundEngine?.playExplosion(true);
         const explosionRadius = 95;
@@ -795,7 +820,7 @@ class Game {
                     const destroyed = brick.takeDamage(2);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id, 8);
                     if (destroyed) {
-                        const earnedPts = Math.round(brick.score * this.comboMultiplier * 2.0); // Chain reaction 2x
+                        const earnedPts = Math.round(brick.score * this.comboMultiplier * 2.0);
                         this.addScore(earnedPts);
                         window.particleSystem?.addFloatingText(`CHAIN! +${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.25, true);
                         if (brick.dropsPowerup) {
@@ -808,34 +833,31 @@ class Game {
     }
 
     update(dt) {
-        // 1. Hit-Stop Frame Freeze
+        // Hit-Stop Frame Freeze
         const isFrozen = this.physicsWorld.hitStop.update(dt);
         if (isFrozen) {
             this.camera.update(dt);
-            return; // Skip physics during hit-stop freeze
+            return;
         }
 
-        // 2. SlowMo / Chrono Management
+        // Chrono SlowMo
         if (this.slowmoTimer > 0) {
             this.slowmoTimer -= dt;
             this.timeScale = 0.35;
-            if (this.slowmoTimer <= 0) {
-                this.timeScale = 1.0;
-            }
+            if (this.slowmoTimer <= 0) this.timeScale = 1.0;
         }
 
-        // 3. Crystal Frenzy Timer
         if (this.isCrystalFrenzy) {
             this.crystalFrenzyTimer -= dt;
-            if (this.crystalFrenzyTimer <= 0) {
-                this.isCrystalFrenzy = false;
-            }
+            if (this.crystalFrenzyTimer <= 0) this.isCrystalFrenzy = false;
         }
 
         const effectiveDt = dt * this.timeScale;
         const timeNow = performance.now() / 1000;
 
-        // Boiling Frame Seed
+        // Sketchbook living ink update
+        this.sketchbook.update(dt);
+
         this.borderSeedTimer += dt;
         if (this.borderSeedTimer > 0.08) {
             this.borderSeedTimer = 0;
@@ -843,14 +865,16 @@ class Game {
         }
 
         if (this.state === 'PLAYING') {
-            // Paddle update with snappy Chrono response (0.85x even in SlowMo)
             const paddleDt = this.slowmoTimer > 0 ? dt * 0.85 : effectiveDt;
             this.paddle.update(paddleDt, this.inputState);
-
             this.safetyNet.update(effectiveDt);
 
-            for (const brick of this.bricks) {
-                brick.update(effectiveDt);
+            for (const brick of this.bricks) brick.update(effectiveDt);
+            this.geometryManager.update(effectiveDt, this.balls);
+
+            // Update Boss AI
+            if (this.boss && this.boss.isAlive) {
+                this.boss.update(effectiveDt, this.bricks, this.paddle);
             }
 
             for (let i = this.lasers.length - 1; i >= 0; i--) {
@@ -867,16 +891,17 @@ class Game {
             const subSteps = 4;
             const subDt = effectiveDt / subSteps;
             for (let s = 0; s < subSteps; s++) {
-                this.physicsWorld.stepSubPhysics(subDt, this.balls, this.paddle, this.bricks, this.lasers, this.powerups, this.safetyNet, timeNow);
+                this.physicsWorld.stepSubPhysics(
+                    subDt, this.balls, this.paddle, this.bricks,
+                    this.lasers, this.powerups, this.safetyNet,
+                    this.geometryManager, this.boss, timeNow
+                );
             }
 
-            // Update Ball visual deformation & life
             for (let i = this.balls.length - 1; i >= 0; i--) {
                 const ball = this.balls[i];
                 ball.update(effectiveDt, this.width, this.height, this.paddle);
-                if (!ball.isAlive) {
-                    this.balls.splice(i, 1);
-                }
+                if (!ball.isAlive) this.balls.splice(i, 1);
             }
 
             if (this.balls.length === 0) {
@@ -884,16 +909,11 @@ class Game {
             }
         } else if (this.state === 'MENU') {
             this.paddle.update(effectiveDt, this.inputState);
-            if (this.balls[0]) {
-                this.balls[0].update(effectiveDt, this.width, this.height, this.paddle);
-            }
+            if (this.balls[0]) this.balls[0].update(effectiveDt, this.width, this.height, this.paddle);
         }
 
-        // Camera Update with Ball Focus
         const leadBall = this.balls[0];
         this.camera.update(dt, leadBall ? leadBall.x : null, leadBall ? leadBall.y : null);
-
-        // Update Particles & VFX
         window.particleSystem?.update(dt);
     }
 
@@ -967,20 +987,8 @@ class Game {
         // 1. Begin Camera2D Pipeline (Trauma, Recoil, Zoom)
         this.camera.begin(ctx);
 
-        // 2. Draw Sketchy Grid Pattern
-        ctx.strokeStyle = theme.gridColor;
-        ctx.lineWidth = 1;
-        const gridSize = 24;
-        ctx.beginPath();
-        for (let x = gridSize; x < this.width; x += gridSize) {
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, this.height);
-        }
-        for (let y = gridSize; y < this.height; y += gridSize) {
-            ctx.moveTo(0, y);
-            ctx.lineTo(this.width, y);
-        }
-        ctx.stroke();
+        // 2. Draw Living Sketchbook Layers (Binder rings, margin notes, coffee stains, ink splatters)
+        this.sketchbook.drawBackgroundLayers(ctx, rc, theme);
 
         // 3. Draw Arena Border
         rc.rectangle(4, 4, this.width - 8, this.height - 8, {
@@ -991,39 +999,47 @@ class Game {
             strokeWidth: 3
         });
 
-        // 4. Draw Safety Trampoline Net
+        // 4. Draw Interactive Level Geometry (Windmills, Portals, Gravity Vortexes)
+        this.geometryManager.draw(ctx, rc, theme);
+
+        // 5. Draw Safety Trampoline Net
         this.safetyNet.draw(ctx, rc, theme);
 
-        // 5. Draw Bricks
+        // 6. Draw Bricks
         for (const brick of this.bricks) {
             brick.draw(ctx, rc, theme);
         }
 
-        // 6. Draw Powerups
+        // 7. Draw Boss (Arch-Pencil)
+        if (this.boss && this.boss.isAlive) {
+            this.boss.draw(ctx, rc, theme);
+        }
+
+        // 8. Draw Powerups
         for (const pow of this.powerups) {
             pow.draw(ctx, rc, theme);
         }
 
-        // 7. Draw Laser Beams
+        // 9. Draw Laser Beams
         for (const laser of this.lasers) {
             laser.draw(ctx, rc, theme);
         }
 
-        // 8. Draw Launch Aim Guide
+        // 10. Draw Launch Aim Guide
         this.drawLaunchAimGuide(ctx, rc, theme);
 
-        // 9. Draw Paddle
+        // 11. Draw Paddle
         this.paddle.draw(ctx, rc, theme);
 
-        // 10. Draw Kinetic Balls
+        // 12. Draw Kinetic Balls
         for (const ball of this.balls) {
             ball.draw(ctx, rc, theme);
         }
 
-        // 11. Draw Particle Debris & Floating Scores
+        // 13. Draw Particle Debris & Floating Scores
         window.particleSystem?.draw(ctx, rc, theme);
 
-        // 12. End Camera Transformation Pipeline & Flash
+        // 14. End Camera Transformation Pipeline & Screen Flash
         this.camera.end(ctx);
     }
 
@@ -1045,7 +1061,6 @@ class Game {
     }
 }
 
-// Instantiate Game on DOM load
 window.addEventListener('DOMContentLoaded', () => {
     window.game = new Game();
     window.game.start();

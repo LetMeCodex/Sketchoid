@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SKETCHOID &bull; Hand-Drawn Neo-Arkanoid</title>
-    <meta name="description" content="SKETCHOID: An interactive hand-drawn neo-Arkanoid brick breaker arcade game built with Rough.js, Anime.js, and procedural pentatonic chime sound synthesis.">
+    <title>SKETCHOID &bull; The Living Sketchbook Arcade</title>
+    <meta name="description" content="SKETCHOID: An interactive hand-drawn neo-Arkanoid living sketchbook arcade game built with Rough.js, Anime.js, and procedural pentatonic chime sound synthesis.">
     <link rel="stylesheet" href="style.css">
     
     <!-- Local Rough.js & Anime.js (Fast & 100% Reliable Offline) -->
@@ -17,7 +17,7 @@
     <header>
         <div class="logo-container">
             <h1>✏️ SKETCHOID</h1>
-            <span class="logo-badge">Rough.js Edition</span>
+            <span class="logo-badge">Living Sketchbook</span>
         </div>
         <div class="top-actions">
             <button id="btnTheme" class="btn-sketch" title="Switch Theme (Key: T)">🎨 Dark Blueprint</button>
@@ -32,7 +32,7 @@
             <div class="hud-group">
                 <div class="hud-item">
                     <span class="hud-label">Stage</span>
-                    <span id="hudLevelName" class="hud-level-tag">The Prismatic Gate</span>
+                    <span id="hudLevelName" class="hud-level-tag">The Clean Draft</span>
                 </div>
                 <div class="hud-item">
                     <span class="hud-label">Score</span>
@@ -68,12 +68,12 @@
         <div id="modalMenu" class="modal-overlay">
             <div class="modal-card">
                 <h2>✏️ SKETCHOID</h2>
-                <p>Aim the elastic boiling paddle using <strong>Mouse</strong> or <strong>A / D / Arrow Keys</strong>. Press <strong>Space</strong> or <strong>Click</strong> to launch ball and blast dual laser turrets!</p>
+                <p>Welcome to the <strong>Living Sketchbook</strong>! Aim the elastic boiling paddle using <strong>Mouse</strong> or <strong>A / D / Arrow Keys</strong>. Press <strong>Space</strong> or <strong>Click</strong> to launch ball and fire dual laser turrets!</p>
 
                 <div class="feature-preview-grid">
-                    <div class="feature-pill">💎 <strong>Tiers:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
-                    <div class="feature-pill">⚡ <strong>Powerups:</strong> 3x Multiball, Lasers, Wide Paddle</div>
-                    <div class="feature-pill">🎵 <strong>Audio:</strong> Pentatonic FM Chime Cascades</div>
+                    <div class="feature-pill">💎 <strong>Materials:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
+                    <div class="feature-pill">📐 <strong>Geometry:</strong> Windmills, Portals, Gravity Vortexes</div>
+                    <div class="feature-pill">✏️ <strong>Boss Battle:</strong> The Arch-Pencil Live Drafter</div>
                 </div>
 
                 <div class="modal-actions">
@@ -99,8 +99,8 @@
         <!-- Stage Clear Modal -->
         <div id="modalLevelClear" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>✨ Stage Cleared!</h2>
-                <p>Exemplary crystal demolition and rebound precision!</p>
+                <h2>✨ Sector Cleared!</h2>
+                <p>Exemplary crystal demolition and drafting mastery!</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
@@ -114,7 +114,7 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnNextLevel" class="btn-sketch btn-large" onclick="if(window.game) window.game.nextLevel();">🚀 Next Stage</button>
+                    <button id="btnNextLevel" class="btn-sketch btn-large" onclick="if(window.game) window.game.nextLevel();">🚀 Next Sector</button>
                 </div>
             </div>
         </div>
@@ -142,8 +142,8 @@
         <!-- Victory Modal -->
         <div id="modalVictory" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>🏆 Sketchoid Champion!</h2>
-                <p>You have conquered all 5 sectors of the Hand-Drawn Sketchoid Nexus!</p>
+                <h2>🏆 Sketchoid Grand Master!</h2>
+                <p>You have defeated <strong>The Arch-Pencil</strong> and conquered all 5 sectors of the Living Sketchbook!</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
@@ -164,9 +164,9 @@
             <div class="legend-items">
                 <span class="legend-chip">🔴 Ruby (Explosive)</span>
                 <span class="legend-chip">🟣 Amethyst (Armored)</span>
-                <span class="legend-chip">🔵 Sapphire</span>
-                <span class="legend-chip">🟠 Amber</span>
-                <span class="legend-chip">🟢 Emerald</span>
+                <span class="legend-chip">🔵 Sapphire (Resonance)</span>
+                <span class="legend-chip">🟠 Amber (Fracture)</span>
+                <span class="legend-chip">🟢 Emerald (Speed)</span>
                 <span class="legend-chip">🟡 Gold (Drop)</span>
             </div>
             <div>
@@ -180,6 +180,9 @@
     <script src="js/particles.js"></script>
     <script src="js/levels.js"></script>
     <script src="js/camera.js"></script>
+    <script src="js/sketchbook.js"></script>
+    <script src="js/geometry.js"></script>
+    <script src="js/boss.js"></script>
     <script src="js/physics.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/game.js"></script>

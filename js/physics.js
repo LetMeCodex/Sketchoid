@@ -1,6 +1,6 @@
 /**
- * SKETCHOID Physics Engine & Collision Pipeline
- * SpatialGrid Broadphase, Narrowphase Swept Solvers, Penetration Separation, Near-Miss Detection, and Hit-Stop Manager
+ * SKETCHOID Physics Engine & Collision Pipeline (Phase 3 Upgrade)
+ * SpatialGrid Broadphase, Narrowphase Swept Solvers, Interactive Geometry Resolvers, Boss Collisions, and Near-Miss Detection
  */
 
 class SpatialGrid {
@@ -69,7 +69,7 @@ class HitStopManager {
     update(dt) {
         if (this.freezeTime > 0) {
             this.freezeTime -= dt;
-            return true; // Is currently frozen
+            return true;
         }
         return false;
     }
@@ -78,14 +78,13 @@ class HitStopManager {
 class NearMissDetector {
     constructor() {
         this.lastNearMissTime = 0;
-        this.cooldown = 0.35; // Prevents spamming on consecutive sub-ticks
+        this.cooldown = 0.35;
     }
 
     testPaddleNearMiss(ball, paddle, timeNow) {
         if (timeNow - this.lastNearMissTime < this.cooldown) return null;
         if (ball.isStuck || ball.vy <= 0) return null;
 
-        // Ball is passing near paddle's top Y plane but just missed the horizontal ends
         const yDist = Math.abs((ball.y + ball.radius) - paddle.y);
         if (yDist < 12) {
             const leftDist = Math.abs(ball.x - paddle.x);
@@ -109,7 +108,6 @@ class NearMissDetector {
         if (timeNow - this.lastNearMissTime < this.cooldown) return null;
         if (ball.isStuck || !brick.isAlive) return null;
 
-        // 4 Brick Corners
         const corners = [
             { x: brick.x, y: brick.y },
             { x: brick.x + brick.width, y: brick.y },
@@ -119,7 +117,6 @@ class NearMissDetector {
 
         for (const c of corners) {
             const dist = Math.hypot(ball.x - c.x, ball.y - c.y);
-            // Just outside the ball radius threshold
             if (dist > ball.radius && dist <= ball.radius + 5) {
                 this.lastNearMissTime = timeNow;
                 return {
@@ -141,7 +138,7 @@ class PhysicsWorld {
         this.spatialGrid = new SpatialGrid(width, height, 64);
         this.hitStop = new HitStopManager();
         this.nearMiss = new NearMissDetector();
-        this.onEvent = null; // Callback: (eventType, payload) => {}
+        this.onEvent = null;
     }
 
     emit(type, payload) {
@@ -150,9 +147,6 @@ class PhysicsWorld {
         }
     }
 
-    /**
-     * Rebuild broadphase grid with active obstacles
-     */
     rebuildGrid(bricks, paddle, safetyNet) {
         this.spatialGrid.clear();
         for (let i = 0; i < bricks.length; i++) {
@@ -163,19 +157,21 @@ class PhysicsWorld {
         }
     }
 
-    /**
-     * Run deterministic sub-step collision step
-     */
-    stepSubPhysics(subDt, balls, paddle, bricks, lasers, powerups, safetyNet, timeNow) {
+    stepSubPhysics(subDt, balls, paddle, bricks, lasers, powerups, safetyNet, geometryManager, boss, timeNow) {
         this.rebuildGrid(bricks, paddle, safetyNet);
 
-        // 1. Ball vs World & Entities
+        // 1. Ball vs World & Interactive Geometry
         for (let i = balls.length - 1; i >= 0; i--) {
             const ball = balls[i];
             if (ball.isStuck) continue;
 
             // Ball physics step (wall bounce, spin Magnus curve)
             ball.physicsStep(subDt, this.width, this.height);
+
+            // Interactive Geometry Collisions (Windmills, Portals, Gravity)
+            if (geometryManager) {
+                geometryManager.handleBallCollisions(ball);
+            }
 
             // Ball vs Safety Net Trampoline
             if (safetyNet.isActive && ball.y + ball.radius >= safetyNet.y) {
@@ -218,31 +214,44 @@ class PhysicsWorld {
                 });
             }
 
+            // Ball vs Boss Collision
+            if (boss && boss.isAlive) {
+                const bossHit = boss.testCollision(ball);
+                if (bossHit) {
+                    ball.x += bossHit.sepX;
+                    ball.y += bossHit.sepY;
+
+                    const dot = ball.vx * bossHit.normalX + ball.vy * bossHit.normalY;
+                    ball.vx -= 2 * dot * bossHit.normalX;
+                    ball.vy -= 2 * dot * bossHit.normalY;
+                    ball.triggerImpactSquash(bossHit.normalX, bossHit.normalY);
+                    ball.enforceVelocityBounds();
+
+                    const defeated = boss.takeDamage(1);
+                    this.emit('bossHit', { boss, ball, hitResult: bossHit, defeated });
+                }
+            }
+
             // Ball vs Bricks via SpatialGrid Broadphase
             const candidateBricks = this.spatialGrid.queryCircle(ball.x, ball.y, ball.radius + 6);
             for (const brick of candidateBricks) {
                 if (!brick.isAlive) continue;
 
-                // Near-miss corner check
                 const cornerNearMiss = this.nearMiss.testBrickCornerNearMiss(ball, brick, timeNow);
                 if (cornerNearMiss) {
                     this.emit('nearMiss', cornerNearMiss);
                 }
 
-                // Narrowphase Swept Collision
                 const hitResult = brick.testCollision(ball);
                 if (hitResult) {
                     if (!ball.isFireball) {
-                        // Penetration separation
                         ball.x += hitResult.sepX;
                         ball.y += hitResult.sepY;
 
-                        // Velocity reflection across contact normal
                         const dot = ball.vx * hitResult.normalX + ball.vy * hitResult.normalY;
                         ball.vx -= 2 * dot * hitResult.normalX;
                         ball.vy -= 2 * dot * hitResult.normalY;
 
-                        // Spin deflection & English
                         ball.vx += ball.spin * hitResult.normalY * 0.4;
                         ball.vy -= ball.spin * hitResult.normalX * 0.4;
 
@@ -250,7 +259,6 @@ class PhysicsWorld {
                         ball.enforceVelocityBounds();
                     }
 
-                    // Damage brick based on ball properties
                     const dmg = ball.isFireball ? 3 : 1;
                     const destroyed = brick.takeDamage(dmg);
 
@@ -266,11 +274,23 @@ class PhysicsWorld {
             }
         }
 
-        // 2. Lasers vs Bricks
+        // 2. Lasers vs Bricks & Boss
         for (let i = lasers.length - 1; i >= 0; i--) {
             const laser = lasers[i];
-            const candidateBricks = this.spatialGrid.queryCircle(laser.x, laser.y, 16);
+            
+            // Check Boss
+            if (boss && boss.isAlive &&
+                laser.x >= boss.x - boss.width / 2 && laser.x <= boss.x + boss.width / 2 &&
+                laser.y >= boss.y - boss.height / 2 && laser.y <= boss.y + boss.height / 2) {
+                
+                laser.isAlive = false;
+                const defeated = boss.takeDamage(1);
+                this.emit('bossHit', { boss, laser, defeated });
+                continue;
+            }
 
+            // Check Bricks
+            const candidateBricks = this.spatialGrid.queryCircle(laser.x, laser.y, 16);
             for (const brick of candidateBricks) {
                 if (brick.isAlive &&
                     laser.x >= brick.x && laser.x <= brick.x + brick.width &&
@@ -284,7 +304,7 @@ class PhysicsWorld {
             }
         }
 
-        // 3. Powerups vs Paddle Magnet / Catch
+        // 3. Powerups vs Paddle
         for (let i = powerups.length - 1; i >= 0; i--) {
             const pow = powerups[i];
             if (pow.x >= paddle.x - 8 && pow.x <= paddle.x + paddle.width + 8 &&
