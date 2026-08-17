@@ -67,6 +67,8 @@
                     <span class="hud-label">RANK</span>
                     <span id="hudLevelVal" class="hud-level-tag" style="color: #b45309;">LVL 1</span>
                 </div>
+                <!-- Dynamic Daily Sketch In-Game Objective Ticker -->
+                <div id="dailyHudObjective" class="hud-item taped-tab" style="display: none;"></div>
             </div>
 
             <div class="hud-group">
@@ -113,22 +115,25 @@
 
                 <div class="modal-actions">
                     <button id="btnStart" class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">Draft Campaign</button>
+                    <button id="btnDailyLaunch" class="btn-sketch btn-large" style="background: #0284c7; color: #fff;" onclick="if(window.dailySketchEngine && window.game) window.dailySketchEngine.startDailyChallenge(window.game);">Today's Sketch</button>
                     <button id="btnEndless" class="btn-sketch btn-large btn-secondary" onclick="if(window.game) window.game.startEndless();">Endless Blueprint</button>
                 </div>
             </div>
         </div>
 
-        <!-- Persistent My Sketchbook Modal -->
+        <!-- Persistent My Sketchbook Modal (6 Physical Notebook Pages) -->
         <div id="modalCollection" class="modal-overlay hidden">
             <div class="modal-card modal-card-wide">
                 <h2>My Sketchbook</h2>
-                <p>Track your campaign stars, discover sketchbook archive objects, and unlock custom drafting tools.</p>
+                <p>Explore your living architectural ledger, daily challenges, artist rankings, and creative identity.</p>
 
                 <div class="tab-bar">
                     <button class="tab-btn active" id="tabChapters" onclick="if(window.game) window.game.renderSketchbookTabs('chapters');">Chapters</button>
-                    <button class="tab-btn" id="tabArchive" onclick="if(window.game) window.game.renderSketchbookTabs('archive');">Archive</button>
-                    <button class="tab-btn" id="tabAchievements" onclick="if(window.game) window.game.renderSketchbookTabs('achievements');">Achievements</button>
-                    <button class="tab-btn" id="tabCosmetics" onclick="if(window.game) window.game.renderSketchbookTabs('cosmetics');">Cosmetics</button>
+                    <button class="tab-btn" id="tabDaily" onclick="if(window.game) window.game.renderSketchbookTabs('daily');">Today's Sketch</button>
+                    <button class="tab-btn" id="tabArtistBoard" onclick="if(window.game) window.game.renderSketchbookTabs('artist_board');">Artist Board</button>
+                    <button class="tab-btn" id="tabArchive" onclick="if(window.game) window.game.renderSketchbookTabs('archive');">Archive & Secrets</button>
+                    <button class="tab-btn" id="tabIdentity" onclick="if(window.game) window.game.renderSketchbookTabs('identity');">My Identity</button>
+                    <button class="tab-btn" id="tabSeason" onclick="if(window.game) window.game.renderSketchbookTabs('season');">Chapter Progress</button>
                 </div>
 
                 <div id="collectionItemsGrid" class="item-grid">
@@ -136,7 +141,23 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnCloseCollection" class="btn-sketch btn-large btn-secondary">Close Sketchbook</button>
+                    <button id="btnOpenShareCard" class="btn-sketch" onclick="if(window.game) window.game.openShareCardModal();">Certificate Card</button>
+                    <button id="btnCloseCollection" class="btn-sketch btn-secondary">Close Sketchbook</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shareable Result Certificate Modal -->
+        <div id="modalShareCard" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>Certificate of Mastery</h2>
+                <p>Your official handwritten architectural achievement card.</p>
+                <div id="shareCardContainer" style="display: flex; justify-content: center; margin-bottom: 14px;">
+                    <!-- Canvas inserted dynamically -->
+                </div>
+                <div class="modal-actions">
+                    <button id="btnDownloadCard" class="btn-sketch btn-large" onclick="if(window.game) window.game.downloadShareCard();">Download Certificate (PNG)</button>
+                    <button id="btnCloseShareCard" class="btn-sketch btn-secondary" onclick="document.getElementById('modalShareCard')?.classList.add('hidden');">Close</button>
                 </div>
             </div>
         </div>
@@ -307,6 +328,7 @@
     <script src="js/geometry.js"></script>
     <script src="js/boss.js"></script>
     <script src="js/progression.js"></script>
+    <script src="js/retention.js"></script>
     <script src="js/challenges.js"></script>
     <script src="js/sketch_renderer.js"></script>
     <script src="js/theme_toggle.js"></script>

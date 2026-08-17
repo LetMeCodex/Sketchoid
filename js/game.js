@@ -830,6 +830,19 @@ class Game {
             this.sessionXpEarned += earnedXp;
             this.sessionInkEarned += earnedInk;
 
+            // Record Part 2 Retention, Daily, Mission & Artist Board Runs
+            window.dailySketchEngine?.recordProgress('stage_cleared', this.livesLostThisLevel);
+            window.missionEngine?.recordProgress('stage_cleared', 1);
+            if (isFlawless) window.missionEngine?.recordProgress('flawless_clear', 1);
+            window.artistBoardEngine?.recordPlayerRun('score', this.score);
+            window.artistBoardEngine?.recordPlayerRun('style', this.styleScore);
+            window.artistBoardEngine?.recordPlayerRun('combo', this.maxComboStreak);
+            window.artistBoardEngine?.recordPlayerRun('ink', this.sessionInkEarned);
+
+            if (this.currentLevel.bossType === 'ink' && isFlawless) {
+                window.progression?.unlockSecret('sec_living_ink_clean');
+            }
+
             window.telemetry?.track('level_complete', {
                 levelId: this.currentLevel.id,
                 score: this.score,
@@ -888,6 +901,12 @@ class Game {
             this.state = 'GAME_OVER';
             window.soundEngine?.playGameOver();
             window.telemetry?.track('game_over', { levelId: this.currentLevel.id, score: this.score });
+
+            // Record Artist Board Runs on Defeat
+            window.artistBoardEngine?.recordPlayerRun('score', this.score);
+            window.artistBoardEngine?.recordPlayerRun('style', this.styleScore);
+            window.artistBoardEngine?.recordPlayerRun('combo', this.maxComboStreak);
+            window.artistBoardEngine?.recordPlayerRun('ink', this.sessionInkEarned);
 
             const modal = document.getElementById('modalGameOver');
             if (modal) {
@@ -1260,9 +1279,11 @@ class Game {
         // Update tab buttons active state
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         if (activeTab === 'chapters') document.getElementById('tabChapters')?.classList.add('active');
+        if (activeTab === 'daily') document.getElementById('tabDaily')?.classList.add('active');
+        if (activeTab === 'artist_board') document.getElementById('tabArtistBoard')?.classList.add('active');
         if (activeTab === 'archive') document.getElementById('tabArchive')?.classList.add('active');
-        if (activeTab === 'achievements') document.getElementById('tabAchievements')?.classList.add('active');
-        if (activeTab === 'cosmetics') document.getElementById('tabCosmetics')?.classList.add('active');
+        if (activeTab === 'identity') document.getElementById('tabIdentity')?.classList.add('active');
+        if (activeTab === 'season') document.getElementById('tabSeason')?.classList.add('active');
 
         grid.innerHTML = '';
         const pData = window.progression.data;
@@ -1297,10 +1318,145 @@ class Game {
                 this.attachTactilePhysics(card);
                 grid.appendChild(card);
 
-                // Draw sector icon
                 SketchItemRenderer.drawItemIllustration(canvas, 'bosses', i === 2 ? 'eraser' : (i === 3 ? 'ink' : (i === 4 ? 'pencil' : 'emerald')), true);
             }
+        } else if (activeTab === 'daily') {
+            const daily = window.dailySketchEngine?.getDailyChallenge();
+            const streak = window.streakEngine?.getStreakData() || { current: 0, highest: 0 };
+
+            // 1. Daily Sketch Banner
+            const banner = document.createElement('div');
+            banner.className = 'daily-sketch-banner';
+            const progress = Math.min(window.dailySketchEngine?.activeProgress || 0, daily.target);
+            const pct = Math.round((progress / daily.target) * 100);
+            banner.innerHTML = `
+                <div class="daily-page-tag">TODAY'S SKETCH &bull; PAGE #${daily.pageNumber} &bull; ${daily.date}</div>
+                <div class="daily-title">${daily.title}</div>
+                <div style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 6px;">${daily.desc}</div>
+                <div class="daily-progress-bar">
+                    <div class="daily-progress-fill" style="width: ${daily.isCompleted ? 100 : pct}%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #38bdf8;">+${daily.inkReward} Ink &bull; +${daily.xpReward} XP</span>
+                    <button id="btnDailyStart" class="btn-sketch btn-small" style="background: ${daily.isCompleted ? '#10b981' : '#0284c7'}; color: #fff;">${daily.isCompleted ? 'CERTIFIED ✓' : 'START SKETCH'}</button>
+                </div>
+            `;
+            grid.appendChild(banner);
+            banner.querySelector('#btnDailyStart')?.addEventListener('click', () => {
+                if (!daily.isCompleted) {
+                    this.hideAllModals();
+                    window.dailySketchEngine?.startDailyChallenge(this);
+                }
+            });
+
+            // 2. 7-Day Notebook Calendar
+            const calSection = document.createElement('div');
+            calSection.className = 'calendar-section';
+            calSection.innerHTML = `
+                <div style="font-weight: bold; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 4px;">7-DAY SKETCH CALENDAR (Streak: ${streak.current} Days)</div>
+                <div class="calendar-grid">
+                    ${['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day, idx) => `
+                        <div class="calendar-day-box ${idx < streak.current ? 'completed-day' : (idx === streak.current ? 'active-day' : '')}">
+                            <div>${day}</div>
+                            <div style="font-size: 1.1rem; margin-top: 4px;">${idx < streak.current ? '✓' : '□'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            grid.appendChild(calSection);
+
+            // 3. Daily Missions
+            const misHeader = document.createElement('div');
+            misHeader.className = 'cosmetic-section-header';
+            misHeader.style.gridColumn = '1 / -1';
+            misHeader.innerHTML = `<h3>DAILY MISSIONS (3 Active)</h3>`;
+            grid.appendChild(misHeader);
+
+            const missions = window.missionEngine?.getDailyMissions() || [];
+            missions.forEach(m => {
+                const card = document.createElement('div');
+                card.className = `mission-card ${m.completed ? 'completed' : ''}`;
+                card.style.gridColumn = '1 / -1';
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-primary);">${m.title}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">[ ${Math.min(m.current, m.target)} / ${m.target} ] &bull; +${m.ink} Ink &bull; +${m.xp} XP</div>
+                    </div>
+                    <span style="font-weight: bold; color: ${m.completed ? '#10b981' : '#38bdf8'}; font-family: var(--font-mono);">${m.completed ? '✓ DONE' : 'IN PROGRESS'}</span>
+                `;
+                grid.appendChild(card);
+            });
+        } else if (activeTab === 'artist_board') {
+            const boardContainer = document.createElement('div');
+            boardContainer.className = 'artist-board-container';
+
+            const activeCat = this.currentBoardCat || 'score';
+            const cohort = window.artistBoardEngine?.getCohort(activeCat) || [];
+
+            boardContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">WEEKLY ARTIST BOARD</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">LEAGUE OF THE LIVING SKETCHBOOK &bull; 60Hz VERIFIED</div>
+                    </div>
+                    <span class="rank-stamp" style="color: #fbbf24;">TOP 5% &bull; GOLDEN INK</span>
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                    ${['score', 'combo', 'style', 'speed', 'perfect', 'ink'].map(c => `
+                        <button class="tab-btn ${c === activeCat ? 'active' : ''}" onclick="window.game.currentBoardCat = '${c}'; window.game.renderSketchbookTabs('artist_board');">${c.toUpperCase()}</button>
+                    `).join('')}
+                </div>
+                <table class="board-table">
+                    <thead>
+                        <tr>
+                            <th>RANK</th>
+                            <th>DRAFTER</th>
+                            <th>TITLE</th>
+                            <th style="text-align: right;">RECORD</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cohort.slice(0, 10).map(entry => `
+                            <tr class="${entry.isPlayer ? 'board-row-player' : ''}">
+                                <td>#${entry.rank}</td>
+                                <td>${entry.name}</td>
+                                <td style="font-family: var(--font-mono); font-size: 0.75rem;">${entry.title}</td>
+                                <td style="text-align: right; font-weight: bold;">${entry.value.toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            grid.appendChild(boardContainer);
         } else if (activeTab === 'archive') {
+            const stats = window.progression.getCollectionStats();
+
+            // 1. Overall Completion Progress Bar
+            const barBox = document.createElement('div');
+            barBox.className = 'archive-progress-container';
+            barBox.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: bold; color: var(--text-primary);">ARCHIVE COMPLETION</span>
+                    <span style="font-family: var(--font-mono); font-weight: bold; color: #38bdf8;">${stats.overall.count} / ${stats.overall.total} (${stats.overall.percentage}%)</span>
+                </div>
+                <div class="daily-progress-bar">
+                    <div class="daily-progress-fill" style="width: ${stats.overall.percentage}%;"></div>
+                </div>
+                <div style="margin-top: 6px;">
+                    ${[25, 50, 75, 100].map(tier => {
+                        const claimed = pData.collectionMilestonesClaimed?.includes(tier);
+                        const ready = stats.overall.percentage >= tier;
+                        return `
+                            <span class="milestone-reward-pill ${claimed ? 'claimed' : ''}" onclick="window.progression.claimCollectionMilestone(${tier}); window.game.renderSketchbookTabs('archive');">
+                                ${tier}%: ${claimed ? '✓ CLAIMED' : (ready ? 'CLAIM BONUS' : 'LOCKED')}
+                            </span>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            grid.appendChild(barBox);
+
+            // 2. Discoveries
             const defs = window.progression.archiveDefinitions;
             for (const cat in defs) {
                 for (const item of defs[cat]) {
@@ -1326,36 +1482,66 @@ class Game {
                     SketchItemRenderer.drawItemIllustration(canvas, cat, item.id, isDiscovered);
                 }
             }
-        } else if (activeTab === 'achievements') {
-            for (const ach of window.progression.achievements) {
-                const completed = pData.completedAchievements.includes(ach.id);
+
+            // 3. Secret Discoveries
+            const secHeader = document.createElement('div');
+            secHeader.className = 'cosmetic-section-header';
+            secHeader.style.gridColumn = '1 / -1';
+            secHeader.innerHTML = `<h3>SECRET DISCOVERIES (${(pData.discoveredSecrets || []).length} / ${window.progression.secrets.length})</h3>`;
+            grid.appendChild(secHeader);
+
+            window.progression.secrets.forEach(sec => {
+                const unlocked = (pData.discoveredSecrets || []).includes(sec.id);
                 const card = document.createElement('div');
-                card.className = `collection-card ${completed ? 'equipped' : 'locked'}`;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = 110;
-                canvas.height = 65;
-                canvas.className = 'item-sketch-canvas';
-                card.appendChild(canvas);
-
-                const textContainer = document.createElement('div');
-                textContainer.innerHTML = `
-                    <div class="collection-title">${ach.name}</div>
-                    <div class="collection-desc">${ach.desc}</div>
-                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981; font-weight: bold;">${completed ? '[ CERTIFIED ]' : `+${ach.inkReward} Ink &bull; +${ach.xpReward} XP`}</div>
+                card.className = `mission-card ${unlocked ? 'completed' : ''}`;
+                card.style.gridColumn = '1 / -1';
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-primary);">${unlocked ? sec.name : 'Hidden Architect Secret'}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${unlocked ? sec.desc : 'Unusual trajectory or mechanical action required.'}</div>
+                    </div>
+                    <span style="font-weight: bold; color: ${unlocked ? '#10b981' : '#64748b'}; font-family: var(--font-mono);">${unlocked ? '★ UNLOCKED' : 'UNDISCOVERED'}</span>
                 `;
-                card.appendChild(textContainer);
-                this.attachTactilePhysics(card);
                 grid.appendChild(card);
+            });
+        } else if (activeTab === 'identity') {
+            const idBox = document.createElement('div');
+            idBox.className = 'identity-profile-card';
+            const idData = pData.identity || { name: 'ANISH', title: 'Ink Apprentice' };
 
-                SketchItemRenderer.drawItemIllustration(canvas, 'achievements', ach.id, completed);
-            }
-        } else if (activeTab === 'cosmetics') {
-            // 1. Paddle Skins Subheader
+            idBox.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">DRAFTER PROFILE</div>
+                <div style="margin-top: 8px;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">CALLIGRAPHY NAME</label><br>
+                    <input id="inputDrafterName" class="identity-name-input" type="text" value="${idData.name}" maxlength="16">
+                    <button id="btnSaveName" class="btn-sketch btn-small" style="margin-left: 6px;">SAVE</button>
+                </div>
+                <div style="margin-top: 12px;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">ARTIST TITLE</label>
+                    <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                        ${window.progression.titles.map(t => `
+                            <button class="tab-btn ${idData.title === t.name ? 'active' : ''}" onclick="window.progression.selectTitle('${t.name}'); window.game.renderSketchbookTabs('identity');">${t.name}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div style="margin-top: 12px;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">OFFICIAL ARCHITECT SIGNATURE</label>
+                    <div class="signature-preview">Certified by Drafter ${idData.name}</div>
+                </div>
+            `;
+            grid.appendChild(idBox);
+            idBox.querySelector('#btnSaveName')?.addEventListener('click', () => {
+                const val = idBox.querySelector('#inputDrafterName')?.value;
+                window.progression.setPlayerName(val);
+                this.renderSketchbookTabs('identity');
+                window.particleSystem?.addFloatingText('NAME SAVED!', 400, 200, '#10b981', 1.8, true);
+            });
+
+            // Drawing Kit: Paddle Skins & Ball Trails
             const skinHeader = document.createElement('div');
             skinHeader.className = 'cosmetic-section-header';
             skinHeader.style.gridColumn = '1 / -1';
-            skinHeader.innerHTML = `<h3>PADDLE SKINS (Select 1)</h3>`;
+            skinHeader.innerHTML = `<h3>DRAWING KIT &bull; PADDLE SKINS</h3>`;
             grid.appendChild(skinHeader);
 
             for (const skin of window.progression.skins) {
@@ -1377,16 +1563,12 @@ class Game {
                     <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
-
                 card.onclick = () => {
                     if (unlocked) {
                         window.progression.selectSkin(skin.id);
-                        this.renderSketchbookTabs('cosmetics');
-                    } else {
-                        if (window.progression.unlockSkinWithInk(skin.id)) {
-                            this.renderSketchbookTabs('cosmetics');
-                            window.soundEngine?.playPowerupCollect('multiball');
-                        }
+                        this.renderSketchbookTabs('identity');
+                    } else if (window.progression.unlockSkinWithInk(skin.id)) {
+                        this.renderSketchbookTabs('identity');
                     }
                 };
                 this.attachTactilePhysics(card);
@@ -1394,12 +1576,11 @@ class Game {
                 SketchItemRenderer.drawItemIllustration(canvas, 'skins', skin.id, unlocked);
             }
 
-            // 2. Ball Trails Subheader
             const trailHeader = document.createElement('div');
             trailHeader.className = 'cosmetic-section-header';
             trailHeader.style.gridColumn = '1 / -1';
             trailHeader.style.marginTop = '12px';
-            trailHeader.innerHTML = `<h3>BALL TRAILS (Select 1)</h3>`;
+            trailHeader.innerHTML = `<h3>DRAWING KIT &bull; BALL TRAILS</h3>`;
             grid.appendChild(trailHeader);
 
             for (const trail of window.progression.trails) {
@@ -1421,25 +1602,83 @@ class Game {
                     <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
-
                 card.onclick = () => {
                     if (unlocked) {
                         window.progression.selectTrail(trail.id);
-                        this.renderSketchbookTabs('cosmetics');
-                    } else {
-                        if (window.progression.unlockTrailWithInk(trail.id)) {
-                            this.renderSketchbookTabs('cosmetics');
-                            window.soundEngine?.playPowerupCollect('multiball');
-                        }
+                        this.renderSketchbookTabs('identity');
+                    } else if (window.progression.unlockTrailWithInk(trail.id)) {
+                        this.renderSketchbookTabs('identity');
                     }
                 };
                 this.attachTactilePhysics(card);
                 grid.appendChild(card);
                 SketchItemRenderer.drawItemIllustration(canvas, 'trails', trail.id, unlocked);
             }
+        } else if (activeTab === 'season') {
+            const season = window.seasonalChapterEngine?.currentChapter;
+            const progressXp = window.seasonalChapterEngine?.getProgress() || 0;
+
+            const seasonTrack = document.createElement('div');
+            seasonTrack.className = 'season-track-container';
+            seasonTrack.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">${season.title}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${season.desc}</div>
+                <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #38bdf8; margin: 4px 0;">SEASON TOTAL DRAFTING XP: ${progressXp.toLocaleString()} / 15,000</div>
+                <div class="daily-progress-bar">
+                    <div class="daily-progress-fill" style="width: ${(progressXp / 15000) * 100}%;"></div>
+                </div>
+            `;
+            grid.appendChild(seasonTrack);
+
+            season.pages.forEach(p => {
+                const unlocked = progressXp >= p.reqXp;
+                const rewardId = `season_ch1_page_${p.page}`;
+                const claimed = RewardClaimManager.isClaimed(rewardId);
+
+                const card = document.createElement('div');
+                card.className = `season-page-item ${unlocked ? 'unlocked' : ''}`;
+                card.style.gridColumn = '1 / -1';
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-primary);">${p.desc}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">Requirement: ${p.reqXp.toLocaleString()} Total XP</div>
+                    </div>
+                    <button class="btn-sketch btn-small" style="background: ${claimed ? '#10b981' : (unlocked ? '#fbbf24' : '#1e293b')}; color: ${claimed || !unlocked ? '#fff' : '#0f172a'};" onclick="if(!'${claimed}' && ${unlocked}) { RewardClaimManager.claim('${rewardId}', ${JSON.stringify(p.reward).replace(/"/g, "'")}); window.game.renderSketchbookTabs('season'); }">
+                        ${claimed ? '✓ CLAIMED' : (unlocked ? 'CLAIM' : 'LOCKED')}
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
         }
 
         window.motionEngine?.animateGridStagger(grid);
+    }
+
+    openShareCardModal() {
+        const modal = document.getElementById('modalShareCard');
+        const container = document.getElementById('shareCardContainer');
+        if (!modal || !container) return;
+
+        container.innerHTML = '';
+        const canvas = ShareCardGenerator.generateCertificate({
+            score: this.score,
+            combo: this.maxComboStreak
+        });
+        container.appendChild(canvas);
+
+        window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
+    }
+
+    downloadShareCard() {
+        const container = document.getElementById('shareCardContainer');
+        const canvas = container?.querySelector('canvas');
+        if (!canvas) return;
+
+        const link = document.createElement('a');
+        link.download = `Sketchoid_Mastery_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        window.particleSystem?.addFloatingText('CERTIFICATE DOWNLOADED!', 400, 200, '#10b981', 2.0, true);
     }
 
     toggleDebugConsole() {

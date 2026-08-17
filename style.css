@@ -565,6 +565,233 @@ canvas {
 }
 
 /* ==========================================================================
+   PART 2: RETENTION & NOTEBOOK STYLING
+   ========================================================================== */
+
+/* Daily Sketch Presentation */
+.daily-sketch-banner {
+    grid-column: 1 / -1;
+    background: rgba(2, 132, 199, 0.08);
+    border: 2px solid var(--border-sketch);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: left;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.daily-page-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.daily-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.daily-progress-bar {
+    width: 100%;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 8px 0;
+    border: 1px solid var(--border-sketch);
+}
+
+.daily-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0284c7, #38bdf8);
+    transition: width 0.3s ease;
+}
+
+/* 7-Day Calendar Grid */
+.calendar-section {
+    grid-column: 1 / -1;
+    margin: 12px 0;
+    text-align: left;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.calendar-day-box {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed var(--border-sketch);
+    border-radius: 6px;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+.calendar-day-box.active-day {
+    border: 2px solid #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+}
+
+.calendar-day-box.completed-day {
+    border: 2px solid #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    font-weight: bold;
+}
+
+/* Missions Section */
+.mission-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-sketch);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.mission-card.completed {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.06);
+}
+
+/* Artist Board Table */
+.artist-board-container {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: left;
+}
+
+.board-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.board-table th {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--border-sketch);
+}
+
+.board-table td {
+    padding: 8px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.board-row-player {
+    background: rgba(56, 189, 248, 0.15) !important;
+    font-weight: bold;
+    color: #38bdf8;
+}
+
+.rank-stamp {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 1px solid currentColor;
+}
+
+/* Archive Progress Bar */
+.archive-progress-container {
+    grid-column: 1 / -1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border-sketch);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.milestone-reward-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 4px 4px 0 0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-sketch);
+    cursor: pointer;
+}
+.milestone-reward-pill.claimed {
+    border-color: #10b981;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+/* Player Identity Box */
+.identity-profile-card {
+    grid-column: 1 / -1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid var(--border-sketch);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+.identity-name-input {
+    background: rgba(0, 0, 0, 0.25);
+    border: 2px solid var(--border-sketch);
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 6px;
+    max-width: 240px;
+    margin-top: 4px;
+}
+
+.signature-preview {
+    font-family: var(--font-sketch);
+    font-size: 1.4rem;
+    color: #38bdf8;
+    margin-top: 6px;
+}
+
+/* Seasonal Roadmap Track */
+.season-track-container {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.season-page-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-sketch);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.season-page-item.unlocked {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+}
+
+/* ==========================================================================
    HAND-DRAWN 3D ROUGH.JS + ANIME.JS CELESTIAL SWITCH
    ========================================================================== */
 .rough-theme-toggle-btn {

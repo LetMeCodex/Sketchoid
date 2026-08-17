@@ -73,6 +73,24 @@ class ProgressionManager {
             { id: 'legend', name: 'Living Notebook Legend', reqLevel: 10 }
         ];
 
+        // Doodles Catalog (Collectible architectural hand-sketched emblems)
+        this.doodles = [
+            { id: 'compass', name: 'Drafting Caliper', desc: 'The fundamental instrument of circular geometry.', tier: 'Common', unlocked: true },
+            { id: 'star', name: 'Prismatic Star', desc: 'Geometry of the five-pointed celestial compass.', tier: 'Common', unlocked: true },
+            { id: 'doodle_caliper', name: 'Brass Caliper', desc: 'Precision measure of proportion and harmony.', tier: 'Rare', unlocked: false },
+            { id: 'doodle_triad', name: 'Prismatic Shard', desc: 'Triangular crystal focusing pure spectral light.', tier: 'Epic', unlocked: false },
+            { id: 'doodle_blueprint', name: 'Master Blueprint', desc: 'The original architect draft of the Living Sketchbook.', tier: 'Legendary', unlocked: false },
+            { id: 'doodle_ouroboros', name: 'Ink Ouroboros', desc: 'The eternal snake of ink and infinite drafts.', tier: 'Ancient', unlocked: false }
+        ];
+
+        // Secret Discoveries Catalog
+        this.secrets = [
+            { id: 'sec_triple_bank', name: 'Triple Ricochet', desc: 'Execute 3 bank shots in under 5 seconds without losing kinetic velocity.', reward: { ink: 300, xp: 600 } },
+            { id: 'sec_laser_melt', name: 'Laser Beam Drill', desc: 'Destroy 8 crystals with a single continuous laser volley.', reward: { ink: 350, xp: 700 } },
+            { id: 'sec_living_ink_clean', name: 'Untouched Vellum', desc: 'Defeat The Living Ink boss without stepping in a single ink puddle.', reward: { ink: 500, xp: 1000 } },
+            { id: 'sec_corner_pocket', name: 'Corner Pocket Snooker', desc: 'Reflect the sphere into the exact top-left corner vertex.', reward: { ink: 400, xp: 800 } }
+        ];
+
         this.load();
     }
 
@@ -87,17 +105,46 @@ class ProgressionManager {
                 selectedTrail: 'charcoal',
                 selectedTitle: 'Ink Apprentice'
             },
+            identity: {
+                name: 'ANISH',
+                title: 'Ink Apprentice',
+                favoriteDoodle: 'compass',
+                signature: 'ANISH'
+            },
             unlockedSkins: ['classic'],
             unlockedTrails: ['charcoal'],
             unlockedThemes: ['blueprint', 'parchment', 'neon'],
+            unlockedDoodles: ['compass', 'star'],
+            unlockedTitles: ['apprentice'],
             discoveredItems: {
                 crystals: ['emerald'],
                 powerups: ['multiball'],
                 bosses: []
             },
+            discoveredSecrets: [],
+            collectionMilestonesClaimed: [],
+            dailyMissions: {},
+            weeklyMissions: {},
+            streak: {
+                current: 0,
+                highest: 0,
+                lastDate: '',
+                graceAvailable: true,
+                savedPages: 1
+            },
+            personalBests: {
+                score: 0,
+                combo: 0,
+                style: 0,
+                speed: 0,
+                perfect: 0,
+                ink: 0
+            },
+            claimedRewardIds: [],
             levelStars: {}, // { [levelId]: { stars: number, bestScore: number, bestStyle: number, bestCombo: number } }
             completedAchievements: [],
             totalStars: 0,
+            lastPlayedTimestamp: Date.now(),
             stats: {
                 bricksBroken: 0,
                 bankShots: 0,
@@ -135,7 +182,17 @@ class ProgressionManager {
             ...defaults,
             ...loaded,
             player: { ...defaults.player, ...(loaded.player || {}) },
+            identity: { ...defaults.identity, ...(loaded.identity || {}) },
             discoveredItems: { ...defaults.discoveredItems, ...(loaded.discoveredItems || {}) },
+            discoveredSecrets: loaded.discoveredSecrets || [],
+            collectionMilestonesClaimed: loaded.collectionMilestonesClaimed || [],
+            dailyMissions: loaded.dailyMissions || {},
+            weeklyMissions: loaded.weeklyMissions || {},
+            streak: { ...defaults.streak, ...(loaded.streak || {}) },
+            personalBests: { ...defaults.personalBests, ...(loaded.personalBests || {}) },
+            claimedRewardIds: loaded.claimedRewardIds || [],
+            unlockedDoodles: loaded.unlockedDoodles || defaults.unlockedDoodles,
+            unlockedTitles: loaded.unlockedTitles || defaults.unlockedTitles,
             stats: { ...defaults.stats, ...(loaded.stats || {}) },
             levelStars: loaded.levelStars || {},
             unlockedSkins: loaded.unlockedSkins || defaults.unlockedSkins,
@@ -146,6 +203,7 @@ class ProgressionManager {
 
     save() {
         try {
+            this.data.lastPlayedTimestamp = Date.now();
             localStorage.setItem(this.storageKey, JSON.stringify(this.data));
         } catch (e) {
             console.error('Error writing save data to localStorage:', e);
@@ -286,14 +344,114 @@ class ProgressionManager {
         return false;
     }
 
-    selectTrail(trailId) {
-        if (this.data.unlockedTrails.includes(trailId)) {
-            this.data.player.selectedTrail = trailId;
-            this.data.selectedTrail = trailId;
+    unlockSkinDirect(skinId) {
+        if (!this.data.unlockedSkins.includes(skinId)) {
+            this.data.unlockedSkins.push(skinId);
             this.save();
-            return true;
         }
-        return false;
+    }
+
+    unlockTrailDirect(trailId) {
+        if (!this.data.unlockedTrails.includes(trailId)) {
+            this.data.unlockedTrails.push(trailId);
+            this.save();
+        }
+    }
+
+    unlockDoodle(doodleId) {
+        if (!this.data.unlockedDoodles.includes(doodleId)) {
+            this.data.unlockedDoodles.push(doodleId);
+            this.save();
+            window.particleSystem?.addFloatingText('DOODLE UNLOCKED!', 400, 200, '#38bdf8', 1.8, true);
+        }
+    }
+
+    unlockTitle(titleId) {
+        if (!this.data.unlockedTitles.includes(titleId)) {
+            this.data.unlockedTitles.push(titleId);
+            this.save();
+            window.particleSystem?.addFloatingText('TITLE UNLOCKED!', 400, 200, '#fbbf24', 1.8, true);
+        }
+    }
+
+    setPlayerName(name) {
+        const clean = (name || 'ANISH').trim().substring(0, 16);
+        this.data.identity.name = clean;
+        this.data.identity.signature = clean;
+        this.save();
+    }
+
+    selectTitle(titleName) {
+        this.data.identity.title = titleName;
+        this.data.player.selectedTitle = titleName;
+        this.save();
+    }
+
+    unlockSecret(secretId) {
+        if (this.data.discoveredSecrets.includes(secretId)) return false;
+        const sec = this.secrets.find(s => s.id === secretId);
+        if (!sec) return false;
+
+        this.data.discoveredSecrets.push(secretId);
+        if (sec.reward) {
+            if (sec.reward.ink) this.addInk(sec.reward.ink);
+            if (sec.reward.xp) this.addXp(sec.reward.xp);
+        }
+        this.save();
+        window.soundEngine?.playPowerupCollect('multiball');
+        window.haptics?.success();
+        window.particleSystem?.addFloatingText(`★ SECRET DISCOVERED: ${sec.name}!`, 400, 220, '#fbbf24', 2.2, true);
+        window.telemetry?.track('collection_item_unlocked', { type: 'secret', id: secretId });
+        return true;
+    }
+
+    getCollectionStats() {
+        const cTotal = this.archiveDefinitions.crystals.length;
+        const pTotal = this.archiveDefinitions.powerups.length;
+        const bTotal = this.archiveDefinitions.bosses.length;
+        const dTotal = this.doodles.length;
+        const sTotal = this.skins.length + this.trails.length;
+        const secTotal = this.secrets.length;
+
+        const grandTotal = cTotal + pTotal + bTotal + dTotal + sTotal + secTotal;
+
+        const cDisc = (this.data.discoveredItems.crystals || []).length;
+        const pDisc = (this.data.discoveredItems.powerups || []).length;
+        const bDisc = (this.data.discoveredItems.bosses || []).length;
+        const dDisc = (this.data.unlockedDoodles || []).length;
+        const sDisc = (this.data.unlockedSkins || []).length + (this.data.unlockedTrails || []).length;
+        const secDisc = (this.data.discoveredSecrets || []).length;
+
+        const grandDisc = cDisc + pDisc + bDisc + dDisc + sDisc + secDisc;
+        const percentage = Math.min(100, Math.round((grandDisc / grandTotal) * 100));
+
+        return {
+            crystals: { count: cDisc, total: cTotal },
+            powerups: { count: pDisc, total: pTotal },
+            bosses: { count: bDisc, total: bTotal },
+            doodles: { count: dDisc, total: dTotal },
+            cosmetics: { count: sDisc, total: sTotal },
+            secrets: { count: secDisc, total: secTotal },
+            overall: { count: grandDisc, total: grandTotal, percentage: percentage }
+        };
+    }
+
+    claimCollectionMilestone(tier) {
+        if (this.data.collectionMilestonesClaimed.includes(tier)) return false;
+        const stats = this.getCollectionStats();
+        if (stats.overall.percentage < tier) return false;
+
+        this.data.collectionMilestonesClaimed.push(tier);
+        if (tier === 25) this.addInk(300);
+        else if (tier === 50) this.unlockDoodle('doodle_ouroboros');
+        else if (tier === 75) this.unlockSkinDirect('gold');
+        else if (tier === 100) this.unlockTitle('legend');
+
+        this.save();
+        window.soundEngine?.playLevelClear();
+        window.haptics?.success();
+        window.particleSystem?.addFloatingText(`★ ${tier}% ARCHIVE MILESTONE CLAIMED!`, 400, 220, '#fbbf24', 2.0, true);
+        return true;
     }
 
     unlockAllDevMode() {

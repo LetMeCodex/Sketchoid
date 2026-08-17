@@ -31,12 +31,16 @@ class SkillEventManager {
         this.lastWallHitTime = 0;
         this.lastBankShotTime = 0;
         this.wallBounceCount = 0;
+        this.bankShotStreak = 0;
+        this.bankStreakTimer = 0;
     }
 
     reset() {
         this.lastWallHitTime = 0;
         this.lastBankShotTime = 0;
         this.wallBounceCount = 0;
+        this.bankShotStreak = 0;
+        this.bankStreakTimer = 0;
     }
 
     recordWallBounce(timeNow) {
@@ -52,9 +56,24 @@ class SkillEventManager {
         // If ball bounced off side walls within the last 0.85s before hitting a brick
         if (timeNow - this.lastWallHitTime < 0.85 && this.wallBounceCount > 0 && timeNow - this.lastBankShotTime > 0.4) {
             this.lastBankShotTime = timeNow;
+
+            // Track consecutive bank shots for secret discovery
+            if (timeNow - this.bankStreakTimer < 5.0) {
+                this.bankShotStreak++;
+                if (this.bankShotStreak >= 3) {
+                    window.progression?.unlockSecret('sec_triple_bank');
+                }
+            } else {
+                this.bankShotStreak = 1;
+            }
+            this.bankStreakTimer = timeNow;
+
+            window.dailySketchEngine?.recordProgress('bank_shot', 1);
+            window.missionEngine?.recordProgress('bank_shot', 1);
+
             return {
                 type: 'BANK_SHOT',
-                name: '📐 BANK SHOT!',
+                name: 'BANK SHOT!',
                 scoreBonus: 80,
                 xpBonus: 10,
                 inkBonus: 2,
