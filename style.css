@@ -503,6 +503,17 @@ canvas {
     cursor: not-allowed;
 }
 
+.cosmetic-section-header {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: var(--text-primary);
+    border-bottom: 2px dashed var(--border-sketch);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    text-align: left;
+}
+
 .item-sketch-canvas {
     width: 100px;
     height: 58px;

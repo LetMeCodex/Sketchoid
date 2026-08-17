@@ -279,6 +279,7 @@ class ProgressionManager {
     selectSkin(skinId) {
         if (this.data.unlockedSkins.includes(skinId)) {
             this.data.player.selectedSkin = skinId;
+            this.data.selectedSkin = skinId;
             this.save();
             return true;
         }
@@ -288,6 +289,7 @@ class ProgressionManager {
     selectTrail(trailId) {
         if (this.data.unlockedTrails.includes(trailId)) {
             this.data.player.selectedTrail = trailId;
+            this.data.selectedTrail = trailId;
             this.save();
             return true;
         }

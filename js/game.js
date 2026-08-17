@@ -1288,7 +1288,13 @@ class Game {
                 SketchItemRenderer.drawItemIllustration(canvas, 'achievements', ach.id, completed);
             }
         } else if (activeTab === 'cosmetics') {
-            // 1. Paddle Skins
+            // 1. Paddle Skins Subheader
+            const skinHeader = document.createElement('div');
+            skinHeader.className = 'cosmetic-section-header';
+            skinHeader.style.gridColumn = '1 / -1';
+            skinHeader.innerHTML = `<h3>📐 PADDLE SKINS (Select 1)</h3>`;
+            grid.appendChild(skinHeader);
+
             for (const skin of window.progression.skins) {
                 const unlocked = pData.unlockedSkins.includes(skin.id);
                 const equipped = pData.player.selectedSkin === skin.id;
@@ -1324,7 +1330,14 @@ class Game {
                 SketchItemRenderer.drawItemIllustration(canvas, 'skins', skin.id, unlocked);
             }
 
-            // 2. Ball Trails
+            // 2. Ball Trails Subheader
+            const trailHeader = document.createElement('div');
+            trailHeader.className = 'cosmetic-section-header';
+            trailHeader.style.gridColumn = '1 / -1';
+            trailHeader.style.marginTop = '12px';
+            trailHeader.innerHTML = `<h3>🌠 BALL TRAILS (Select 1)</h3>`;
+            grid.appendChild(trailHeader);
+
             for (const trail of window.progression.trails) {
                 const unlocked = pData.unlockedTrails.includes(trail.id);
                 const equipped = pData.player.selectedTrail === trail.id;

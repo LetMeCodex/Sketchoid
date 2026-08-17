@@ -217,7 +217,7 @@ class Paddle {
         const halfW = w / 2;
         const halfH = h / 2;
 
-        const skin = (window.progression && window.progression.data.selectedSkin) || 'classic';
+        const skin = window.progression?.data?.player?.selectedSkin || window.progression?.data?.selectedSkin || 'classic';
 
         if (skin === 'ruler') {
             rc.rectangle(-halfW, -halfH, w, h, {
@@ -500,7 +500,7 @@ class Ball {
     draw(ctx, rc, theme) {
         ctx.save();
 
-        const trailType = (window.progression && window.progression.data.selectedTrail) || 'charcoal';
+        const trailType = window.progression?.data?.player?.selectedTrail || window.progression?.data?.selectedTrail || 'charcoal';
 
         // Fast Motion Trails
         for (let i = 0; i < this.trail.length; i++) {
