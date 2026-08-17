@@ -362,23 +362,6 @@ h1 {
     background: transparent !important;
 }
 
-/* Mobile Touch Bar */
-.mobile-touch-bar {
-    width: 100%;
-    max-width: min(calc((100vh - 90px) * (800 / 640)), 1100px);
-    margin-top: 4px;
-    padding: 6px;
-    text-align: center;
-    font-family: var(--font-sketch);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    border: 2px dashed var(--border-sketch);
-    border-radius: 8px;
-    background: var(--sticky-bg);
-    box-sizing: border-box;
-    display: block;
-}
-
 /* Modals with 3D Perspective Depth */
 .modal-overlay {
     position: absolute;
@@ -1164,16 +1147,6 @@ h1 {
         border: 2.5px solid var(--border-sketch) !important;
         border-radius: 8px !important;
         box-shadow: 2px 3px 0px var(--shadow-color) !important;
-        touch-action: none;
-    }
-
-    .mobile-touch-bar {
-        width: 100%;
-        max-width: 100%;
-        margin-top: 4px;
-        padding: 5px;
-        font-size: 0.70rem;
-        letter-spacing: 0.3px;
         touch-action: none;
     }
 

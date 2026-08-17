@@ -212,25 +212,26 @@ class SketchbookWorld {
         const seed = 42 + this.boilSeedOffset;
 
         // 1. Binder Ring Holes (Left Margin)
-        const holeX = 22;
-        const numRings = 7;
+        const isMobile = this.width < 600;
+        const holeX = isMobile ? 12 : 22;
+        const numRings = Math.max(7, Math.floor(this.height / 90));
         const spacing = (this.height - 80) / (numRings - 1);
 
         for (let i = 0; i < numRings; i++) {
             const hy = 40 + i * spacing;
-            rc.arc(holeX, hy, 18, 14, -Math.PI * 0.7, Math.PI * 0.7, false, {
+            rc.arc(holeX, hy, isMobile ? 14 : 18, isMobile ? 11 : 14, -Math.PI * 0.7, Math.PI * 0.7, false, {
                 seed: seed + i * 5,
                 stroke: theme.borderStroke,
                 strokeWidth: 2.5
             });
             ctx.fillStyle = theme.bgDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)';
             ctx.beginPath();
-            ctx.arc(holeX, hy, 5, 0, Math.PI * 2);
+            ctx.arc(holeX, hy, isMobile ? 4 : 5, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // 2. Margin Red Guide Line
-        const marginLineX = 54;
+        const marginLineX = isMobile ? 28 : 54;
         rc.line(marginLineX, 0, marginLineX, this.height, {
             seed: seed + 50,
             stroke: stage >= 4 ? '#ef4444' : 'rgba(239, 68, 68, 0.35)',

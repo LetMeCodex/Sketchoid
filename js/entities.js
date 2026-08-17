@@ -7,12 +7,12 @@ class Paddle {
     constructor(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
-        this.baseWidth = 110;
+        this.baseWidth = 130;
         this.width = this.baseWidth;
         this.targetWidth = this.baseWidth;
-        this.height = 18;
+        this.height = 24;
         this.x = canvasWidth / 2 - this.width / 2;
-        this.y = canvasHeight - 48;
+        this.y = canvasHeight - 52;
         this.targetX = this.x;
         this.vx = 0;
         this.prevX = this.x;
@@ -49,7 +49,7 @@ class Paddle {
         this.width = this.baseWidth;
         this.targetWidth = this.baseWidth;
         this.x = canvasWidth / 2 - this.width / 2;
-        this.y = canvasHeight - 48;
+        this.y = canvasHeight - 52;
         this.targetX = this.x;
         this.vx = 0;
         this.prevX = this.x;
@@ -68,7 +68,7 @@ class Paddle {
     resize(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
-        this.y = canvasHeight - 48;
+        this.y = canvasHeight - 52;
         this.x = Math.max(8, Math.min(canvasWidth - this.width - 8, this.x));
         this.targetX = this.x;
     }
@@ -344,7 +344,7 @@ class Paddle {
 
 class Ball {
     constructor(x, y, vx = 0, vy = 0) {
-        this.radius = 8.5;
+        this.radius = 13.0;
         this.x = x;
         this.y = y;
         this.prevX = x;
@@ -887,8 +887,8 @@ class LaserBeam {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 4.5;
-        this.height = 16;
+        this.width = 6;
+        this.height = 24;
         this.vy = -16;
         this.isAlive = true;
     }
@@ -916,8 +916,8 @@ class PowerupCapsule {
     constructor(x, y, type = null) {
         this.x = x;
         this.y = y;
-        this.width = 28;
-        this.height = 20;
+        this.width = 36;
+        this.height = 24;
         this.vy = 2.2;
         this.vx = (Math.random() - 0.5) * 1.2;
         this.time = Math.random() * 10;

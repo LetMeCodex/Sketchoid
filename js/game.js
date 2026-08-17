@@ -136,15 +136,14 @@ class Game {
         const updateSize = () => {
             const isMobile = window.innerWidth <= 768 || window.innerHeight > window.innerWidth;
             if (isMobile) {
-                // Tall mobile portrait: 600 width, dynamic height matching phone viewport
-                const headerH = document.querySelector('header')?.offsetHeight || 38;
-                const hudH = document.querySelector('.hud-bar')?.offsetHeight || 44;
-                const touchBarH = document.getElementById('mobileTouchBar')?.offsetHeight || 32;
-                const availableH = window.innerHeight - headerH - hudH - touchBarH - 24;
-                const availableW = window.innerWidth - 12;
+                // Tall mobile portrait: 460 coordinate width, dynamic height matching phone viewport
+                const headerH = document.querySelector('header')?.offsetHeight || 36;
+                const hudH = document.querySelector('.hud-bar')?.offsetHeight || 40;
+                const availableH = window.innerHeight - headerH - hudH - 10;
+                const availableW = window.innerWidth - 8;
                 
-                const targetW = 600;
-                const aspect = Math.max(1.30, Math.min(1.85, availableH / Math.max(1, availableW)));
+                const targetW = 460;
+                const aspect = Math.max(1.35, Math.min(1.95, availableH / Math.max(1, availableW)));
                 const targetH = Math.round(targetW * aspect);
 
                 if (this.width !== targetW || this.height !== targetH) {
@@ -782,13 +781,13 @@ class Game {
         const totalRows = rows.length;
         const totalCols = rows[0].length;
 
-        const isMobile = this.width < 700;
-        const brickMargin = isMobile ? 4 : 5;
-        const topOffset = this.boss ? (isMobile ? 180 : 150) : (isMobile ? 90 : 70);
-        const sidePadding = isMobile ? 32 : 40;
+        const isMobile = this.width < 600;
+        const brickMargin = isMobile ? 3 : 5;
+        const topOffset = this.boss ? (isMobile ? 150 : 150) : (isMobile ? 75 : 70);
+        const sidePadding = isMobile ? 20 : 40;
         const totalUsableWidth = this.width - sidePadding * 2;
         const brickW = (totalUsableWidth - (totalCols - 1) * brickMargin) / totalCols;
-        const brickH = isMobile ? 26 : 22;
+        const brickH = isMobile ? 32 : 24;
 
         const codeToTypeKey = {
             'E': 'EMERALD',
