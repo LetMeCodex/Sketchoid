@@ -1,82 +1,84 @@
 /* ==========================================================================
-   SKETCHOID Living Sketchbook Design System (Theme 2.0 & Diegetic Notebook HUD)
+   SKETCHOID Living Sketchbook Design System (Architectural Drafting & 3D UI)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Fredoka:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
 
 :root {
-    --font-heading: 'Fredoka', cursive, sans-serif;
+    --font-heading: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --font-sketch: 'Architects Daughter', cursive, sans-serif;
     
-    /* Default Theme: Dark Blueprint */
-    --bg-main: #0b132b;
-    --canvas-bg: #0f172a;
+    /* Default Theme: Cyanotype Blueprint */
+    --bg-main: #070d1e;
+    --canvas-bg: #0b132b;
     --text-primary: #f8fafc;
     --text-muted: #94a3b8;
     --border-sketch: #38bdf8;
     --button-bg: #0284c7;
     --button-text: #ffffff;
     --tab-active-bg: #38bdf8;
-    --tab-active-text: #0f172a;
-    --card-bg: rgba(15, 23, 42, 0.94);
-    --sticky-bg: #1e293b;
-    --sticky-border: #38bdf8;
-    --shadow-color: rgba(0, 0, 0, 0.45);
-}
-
-/* Theme 1: Vintage Parchment */
-body.theme-parchment {
-    --bg-main: #f5eedc;
-    --canvas-bg: #faf6ee;
-    --text-primary: #292524;
-    --text-muted: #78716c;
-    --border-sketch: #44403c;
-    --button-bg: #e7e5e4;
-    --button-text: #1c1917;
-    --tab-active-bg: #44403c;
-    --tab-active-text: #faf6ee;
-    --card-bg: rgba(250, 246, 238, 0.96);
-    --sticky-bg: #fef08a;
-    --sticky-border: #ca8a04;
-    --shadow-color: rgba(68, 64, 60, 0.25);
-}
-
-/* Theme 2: Dark Blueprint */
-body.theme-blueprint {
-    --bg-main: #090e17;
-    --canvas-bg: #0f172a;
-    --text-primary: #f8fafc;
-    --text-muted: #94a3b8;
-    --border-sketch: #38bdf8;
-    --button-bg: #0284c7;
-    --button-text: #ffffff;
-    --tab-active-bg: #38bdf8;
-    --tab-active-text: #0f172a;
-    --card-bg: rgba(15, 23, 42, 0.94);
-    --sticky-bg: #1e293b;
+    --tab-active-text: #070d1e;
+    --card-bg: rgba(11, 19, 43, 0.96);
+    --sticky-bg: #1c2541;
     --sticky-border: #38bdf8;
     --shadow-color: rgba(0, 0, 0, 0.55);
 }
 
-/* Theme 3: Neon Chalkboard */
-body.theme-neon {
-    --bg-main: #0c0a09;
-    --canvas-bg: #18181b;
+/* Theme 1: Studio Draft (Pure Linen Paper & Prussian Blue - Clean Architectural) */
+body.theme-parchment,
+body.theme-draft {
+    --bg-main: #f1f5f9;
+    --canvas-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-muted: #64748b;
+    --border-sketch: #1e3a8a;
+    --button-bg: #1e293b;
+    --button-text: #ffffff;
+    --tab-active-bg: #1e3a8a;
+    --tab-active-text: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.98);
+    --sticky-bg: #f8fafc;
+    --sticky-border: #3b82f6;
+    --shadow-color: rgba(15, 23, 42, 0.16);
+}
+
+/* Theme 2: Cyanotype Blueprint */
+body.theme-blueprint {
+    --bg-main: #070d1e;
+    --canvas-bg: #0b132b;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-sketch: #38bdf8;
+    --button-bg: #0284c7;
+    --button-text: #ffffff;
+    --tab-active-bg: #38bdf8;
+    --tab-active-text: #070d1e;
+    --card-bg: rgba(11, 19, 43, 0.96);
+    --sticky-bg: #1c2541;
+    --sticky-border: #38bdf8;
+    --shadow-color: rgba(0, 0, 0, 0.55);
+}
+
+/* Theme 3: Obsidian Noir */
+body.theme-neon,
+body.theme-obsidian {
+    --bg-main: #09090b;
+    --canvas-bg: #121215;
     --text-primary: #fafafa;
     --text-muted: #a1a1aa;
     --border-sketch: #f43f5e;
     --button-bg: #e11d48;
     --button-text: #ffffff;
     --tab-active-bg: #f43f5e;
-    --tab-active-text: #18181b;
-    --card-bg: rgba(24, 24, 27, 0.95);
+    --tab-active-text: #09090b;
+    --card-bg: rgba(18, 18, 21, 0.96);
     --sticky-bg: #27272a;
     --sticky-border: #fb7185;
-    --shadow-color: rgba(244, 63, 94, 0.25);
+    --shadow-color: rgba(244, 63, 94, 0.22);
 }
 
-/* Theme 4: High Contrast Mode */
+/* Theme 4: High Contrast Technical Mode */
 body.theme-high-contrast {
     --bg-main: #000000;
     --canvas-bg: #000000;
@@ -409,6 +411,13 @@ canvas {
     text-align: left;
 }
 
+.modal-diorama-canvas {
+    width: 120px;
+    height: 60px;
+    margin: 0 auto 10px auto;
+    display: block;
+}
+
 .modal-actions {
     display: flex;
     justify-content: center;
@@ -426,6 +435,22 @@ canvas {
     background: transparent;
     color: var(--text-primary);
 }
+
+/* Legend Swatches */
+.swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.swatch-ruby { background: #ef4444; border: 1px solid #b91c1c; }
+.swatch-amethyst { background: #a855f7; border: 1px solid #7e22ce; }
+.swatch-sapphire { background: #06b6d4; border: 1px solid #0e7490; }
+.swatch-amber { background: #f59e0b; border: 1px solid #b45309; }
+.swatch-emerald { background: #10b981; border: 1px solid #047857; }
+.swatch-gold { background: #fbbf24; border: 1px solid #d97706; }
 
 /* Settings Form */
 .settings-form {

@@ -16,26 +16,25 @@
     <!-- Top Navigation Header -->
     <header>
         <div class="logo-container">
-            <h1>✏️ SKETCHOID</h1>
-            <span class="logo-badge">Living Sketchbook</span>
+            <canvas id="sketchoid-3d-logo" class="logo-canvas" width="175" height="42"></canvas>
         </div>
         <div class="top-actions">
-            <button id="btnCollection" class="rough-ui-btn" title="Notebook Collection">📖 My Sketchbook</button>
-            <button id="btnDevTools" class="rough-ui-btn" title="Developer Tools (Key: `)">🛠️ Dev Tools</button>
-            <button id="btnSettings" class="rough-ui-btn" title="Settings & Accessibility">⚙️ Settings</button>
+            <button id="btnCollection" class="rough-ui-btn" title="Notebook Collection">My Sketchbook</button>
+            <button id="btnDevTools" class="rough-ui-btn" title="Developer Tools (Key: `)">Dev Tools</button>
+            <button id="btnSettings" class="rough-ui-btn" title="Settings & Accessibility">Settings</button>
             <button id="theme-toggle-btn" class="rough-theme-toggle-btn" title="Toggle Day / Night world [T]" aria-label="Toggle Day and Night mode" role="switch" aria-checked="false"></button>
-            <button id="btnMute" class="rough-ui-btn" title="Toggle Sound (Key: M)">🔊 Sound</button>
+            <button id="btnMute" class="rough-ui-btn" title="Toggle Sound (Key: M)">Sound</button>
         </div>
     </header>
 
     <!-- Main Game Container -->
     <main class="game-container">
-        <!-- Diegetic Top HUD Dashboard (Styled like handwritten notebook notes) -->
+        <!-- Diegetic Top HUD Dashboard (Architectural Drafting Ledger) -->
         <div class="hud-bar diegetic-hud">
             <div class="hud-group">
                 <!-- Taped Paper Tab for Stage -->
                 <div class="hud-item taped-tab">
-                    <span class="hud-label">SECTOR ✎</span>
+                    <span class="hud-label">SECTOR</span>
                     <span id="hudLevelName" class="hud-level-tag">The Clean Draft</span>
                 </div>
                 <!-- Sticky Note for Score -->
@@ -45,12 +44,12 @@
                 </div>
                 <!-- Sticky Note for Ink Currency & Level -->
                 <div class="hud-item sticky-note ink-note">
-                    <span class="hud-label">INK 🖋️</span>
-                    <span id="hudInkVal" class="hud-value" style="color: #38bdf8;">0</span>
+                    <span class="hud-label">INK</span>
+                    <span id="hudInkVal" class="hud-value" style="color: #0284c7;">0</span>
                 </div>
                 <div class="hud-item taped-tab">
                     <span class="hud-label">RANK</span>
-                    <span id="hudLevelVal" class="hud-level-tag" style="color: #fbbf24;">LVL 1</span>
+                    <span id="hudLevelVal" class="hud-level-tag" style="color: #b45309;">LVL 1</span>
                 </div>
             </div>
 
@@ -64,10 +63,10 @@
                     <span id="hudMultiplier" class="combo-multiplier">1x</span>
                 </div>
 
-                <!-- Hand-drawn Lives -->
+                <!-- Hand-drawn Geometric Lives -->
                 <div class="hud-item taped-tab" style="text-align: right;">
                     <span class="hud-label">SPHERES</span>
-                    <span id="hudLives" class="hud-value" style="font-size: 1.15rem; letter-spacing: 2px;">❤️ ❤️ ❤️</span>
+                    <span id="hudLives" class="hud-value" style="font-size: 1.05rem; letter-spacing: 3px; font-weight: bold; color: #0284c7;">[ 3 / 3 ]</span>
                 </div>
             </div>
         </div>
@@ -77,27 +76,28 @@
             <canvas id="gameCanvas" width="800" height="640"></canvas>
         </div>
 
-        <!-- Mobile Touch Bar -->
+        <!-- Minimalist Architectural Margin Guide -->
         <div id="mobileTouchBar" class="mobile-touch-bar">
-            <span>👈 DRAG TO AIM / MOVE &bull; TAP TO LAUNCH 👉</span>
+            <span>&larr; DRAG TO AIM &bull; MOVE PADDLE &bull; TAP TO LAUNCH &rarr;</span>
         </div>
 
         <!-- Start Menu Modal -->
         <div id="modalMenu" class="modal-overlay">
             <div class="modal-card">
-                <h2>✏️ SKETCHOID</h2>
-                <p>Welcome to the <strong>Living Sketchbook</strong>! Move with <strong>Mouse / Touch</strong> or <strong>A / D</strong>. Launch with <strong>Space / Click</strong> to shatter crystals, earn Ink, and draft your personal sketchbook!</p>
+                <canvas id="menu-art-canvas" class="modal-diorama-canvas"></canvas>
+                <h2>SKETCHOID</h2>
+                <p>Welcome to the <strong>Living Sketchbook</strong>. Break crystals, master harmonic rebounds, earn Ink, and draft your architectural collection.</p>
 
                 <div class="feature-preview-grid">
-                    <div class="feature-pill">💎 <strong>Materials:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
-                    <div class="feature-pill">🧼 <strong>Bosses:</strong> The Eraser, The Living Ink, The Arch-Pencil</div>
-                    <div class="feature-pill">★ <strong>3-Star Mastery:</strong> High-skill bank shots & recovery</div>
-                    <div class="feature-pill">🎵 <strong>Dynamic Audio:</strong> 5-Layer Adaptive Pentatonic Symphony</div>
+                    <div class="feature-pill"><strong>Materials:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
+                    <div class="feature-pill"><strong>Arch-Enemies:</strong> The Eraser, The Living Ink, The Arch-Pencil</div>
+                    <div class="feature-pill"><strong>Mastery Rating:</strong> 3-Star bank shots, precision angles & recovery</div>
+                    <div class="feature-pill"><strong>Sound Synthesis:</strong> 5-Layer Procedural Pentatonic Chimes</div>
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnStart" class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">🚀 Play Campaign</button>
-                    <button id="btnEndless" class="btn-sketch btn-large btn-secondary" onclick="if(window.game) window.game.startEndless();">♾️ Infinite Mode</button>
+                    <button id="btnStart" class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">Draft Campaign</button>
+                    <button id="btnEndless" class="btn-sketch btn-large btn-secondary" onclick="if(window.game) window.game.startEndless();">Endless Blueprint</button>
                 </div>
             </div>
         </div>
@@ -105,14 +105,14 @@
         <!-- Persistent My Sketchbook Modal -->
         <div id="modalCollection" class="modal-overlay hidden">
             <div class="modal-card modal-card-wide">
-                <h2>📖 My Sketchbook</h2>
-                <p>Track your campaign stars, discover sketchbook archive objects, and unlock custom drafting tools!</p>
+                <h2>My Sketchbook</h2>
+                <p>Track your campaign stars, discover sketchbook archive objects, and unlock custom drafting tools.</p>
 
                 <div class="tab-bar">
-                    <button class="tab-btn active" id="tabChapters" onclick="if(window.game) window.game.renderSketchbookTabs('chapters');">📖 Chapters</button>
-                    <button class="tab-btn" id="tabArchive" onclick="if(window.game) window.game.renderSketchbookTabs('archive');">💎 Archive</button>
-                    <button class="tab-btn" id="tabAchievements" onclick="if(window.game) window.game.renderSketchbookTabs('achievements');">🏆 Achievements</button>
-                    <button class="tab-btn" id="tabCosmetics" onclick="if(window.game) window.game.renderSketchbookTabs('cosmetics');">🎨 Cosmetics</button>
+                    <button class="tab-btn active" id="tabChapters" onclick="if(window.game) window.game.renderSketchbookTabs('chapters');">Chapters</button>
+                    <button class="tab-btn" id="tabArchive" onclick="if(window.game) window.game.renderSketchbookTabs('archive');">Archive</button>
+                    <button class="tab-btn" id="tabAchievements" onclick="if(window.game) window.game.renderSketchbookTabs('achievements');">Achievements</button>
+                    <button class="tab-btn" id="tabCosmetics" onclick="if(window.game) window.game.renderSketchbookTabs('cosmetics');">Cosmetics</button>
                 </div>
 
                 <div id="collectionItemsGrid" class="item-grid">
@@ -128,30 +128,30 @@
         <!-- Settings & Accessibility Modal -->
         <div id="modalSettings" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>⚙️ Settings & Accessibility</h2>
-                <p>Fine-tune audio levels, visual motion, and accessibility options.</p>
+                <h2>Settings & Accessibility</h2>
+                <p>Fine-tune audio levels, visual motion, and contrast settings.</p>
 
                 <div class="settings-form">
                     <div class="settings-row">
-                        <label for="sliderMusic">🎵 Music Volume</label>
+                        <label for="sliderMusic">Music Volume</label>
                         <input type="range" id="sliderMusic" min="0" max="1" step="0.05" value="0.65">
                     </div>
                     <div class="settings-row">
-                        <label for="sliderSFX">💥 SFX Volume</label>
+                        <label for="sliderSFX">SFX Acoustics</label>
                         <input type="range" id="sliderSFX" min="0" max="1" step="0.05" value="0.85">
                     </div>
                     <div class="settings-row toggle-row">
-                        <label for="chkReducedMotion">📳 Reduced Motion (Low Shake)</label>
+                        <label for="chkReducedMotion">Reduced Motion (Low Screen Shake)</label>
                         <input type="checkbox" id="chkReducedMotion">
                     </div>
                     <div class="settings-row toggle-row">
-                        <label for="chkHighContrast">👁️ High Contrast Mode</label>
+                        <label for="chkHighContrast">High Contrast Drafting Mode</label>
                         <input type="checkbox" id="chkHighContrast">
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnFullscreen" class="btn-sketch">⛶ Fullscreen</button>
+                    <button id="btnFullscreen" class="btn-sketch">Fullscreen</button>
                     <button id="btnCloseSettings" class="btn-sketch btn-secondary">Done</button>
                 </div>
             </div>
@@ -160,12 +160,13 @@
         <!-- Pause Modal -->
         <div id="modalPause" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>⏸️ Game Paused</h2>
-                <p>Take a breath! Your combo streak and active powerups are safely preserved.</p>
+                <canvas id="pause-art-canvas" class="modal-diorama-canvas"></canvas>
+                <h2>Draft Paused</h2>
+                <p>Session safely suspended. Your combo streak and active drafting modifiers are preserved.</p>
                 <div class="modal-actions">
-                    <button id="btnResume" class="btn-sketch btn-large" onclick="if(window.game) window.game.togglePause();">▶️ Resume Game</button>
-                    <button id="btnRestart" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.restartCurrentGame();">🔄 Restart Level</button>
-                    <button id="btnMenu" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">🏠 Main Menu</button>
+                    <button id="btnResume" class="btn-sketch btn-large" onclick="if(window.game) window.game.togglePause();">Resume Draft</button>
+                    <button id="btnRestart" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.restartCurrentGame();">Restart Sector</button>
+                    <button id="btnMenu" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">Main Menu</button>
                 </div>
             </div>
         </div>
@@ -173,34 +174,35 @@
         <!-- Stage Clear Modal -->
         <div id="modalLevelClear" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>✨ Sector Cleared!</h2>
-                <p>Exemplary crystal demolition and drafting mastery!</p>
+                <canvas id="clear-art-canvas" class="modal-diorama-canvas"></canvas>
+                <h2>Sector Certified Complete</h2>
+                <p>Exemplary crystal demolition and architectural mastery.</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
                         <span class="hud-label">Mastery Stars</span>
-                        <span id="clearStarsDisplay" class="hud-value" style="color: #fbbf24; font-size: 1.6rem;">★ ★ ★</span>
+                        <span id="clearStarsDisplay" class="hud-value" style="color: #b45309; font-size: 1.5rem;">[ ★ ★ ★ ]</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Score</span>
-                        <span id="clearScore" class="hud-value" style="color: #10b981;">0</span>
+                        <span id="clearScore" class="hud-value" style="color: #059669;">0</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Max Combo</span>
-                        <span id="clearCombo" class="hud-value" style="color: #fbbf24;">0x</span>
+                        <span id="clearCombo" class="hud-value" style="color: #0284c7;">0x</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Ink Earned</span>
-                        <span id="clearInkReward" class="hud-value" style="color: #38bdf8;">+20 🖋️</span>
+                        <span id="clearInkReward" class="hud-value" style="color: #0284c7;">+20 Ink</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">XP Earned</span>
-                        <span id="clearXpReward" class="hud-value" style="color: #a855f7;">+100 XP</span>
+                        <span id="clearXpReward" class="hud-value" style="color: #7c3aed;">+100 XP</span>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnNextLevel" class="btn-sketch btn-large" onclick="if(window.game) window.game.nextLevel();">🚀 Next Sector</button>
+                    <button id="btnNextLevel" class="btn-sketch btn-large" onclick="if(window.game) window.game.nextLevel();">Proceed to Next Sector</button>
                 </div>
             </div>
         </div>
@@ -208,35 +210,36 @@
         <!-- Game Over Modal -->
         <div id="modalGameOver" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>💀 Run Complete</h2>
-                <p>Your drafting session has concluded. Progress and earned Ink are saved!</p>
+                <canvas id="gameover-art-canvas" class="modal-diorama-canvas"></canvas>
+                <h2>Drafting Session Concluded</h2>
+                <p>All spheres expended. Progress and earned Ink have been recorded in your permanent ledger.</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
                         <span class="hud-label">Final Score</span>
-                        <span id="gameOverFinalScore" class="hud-value" style="color: #ef4444;">0</span>
+                        <span id="gameOverFinalScore" class="hud-value" style="color: #dc2626;">0</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Style Score</span>
-                        <span id="gameOverStyleScore" class="hud-value" style="color: #38bdf8;">0</span>
+                        <span id="gameOverStyleScore" class="hud-value" style="color: #0284c7;">0</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Max Combo</span>
-                        <span id="gameOverMaxCombo" class="hud-value" style="color: #fbbf24;">0x</span>
+                        <span id="gameOverMaxCombo" class="hud-value" style="color: #b45309;">0x</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">Ink Earned</span>
-                        <span id="gameOverInkEarned" class="hud-value" style="color: #38bdf8;">+0 🖋️</span>
+                        <span id="gameOverInkEarned" class="hud-value" style="color: #0284c7;">+0 Ink</span>
                     </div>
                     <div class="modal-stat-box">
                         <span class="hud-label">XP Earned</span>
-                        <span id="gameOverXpEarned" class="hud-value" style="color: #a855f7;">+0 XP</span>
+                        <span id="gameOverXpEarned" class="hud-value" style="color: #7c3aed;">+0 XP</span>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">🔄 Try Again</button>
-                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">🏠 Main Menu</button>
+                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">Redraft Sector</button>
+                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">Main Menu</button>
                 </div>
             </div>
         </div>
@@ -244,19 +247,19 @@
         <!-- Victory Modal -->
         <div id="modalVictory" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>🏆 Sketchoid Grand Master!</h2>
-                <p>You have defeated <strong>The Arch-Pencil</strong> and conquered all 5 sectors of the Living Sketchbook!</p>
+                <h2>Architectural Grand Master</h2>
+                <p>You have conquered all 5 sectors and defeated <strong>The Arch-Pencil</strong>.</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
                         <span class="hud-label">Master Score</span>
-                        <span id="victoryFinalScore" class="hud-value" style="color: #fbbf24;">0</span>
+                        <span id="victoryFinalScore" class="hud-value" style="color: #b45309;">0</span>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startEndless();">♾️ Enter Endless Rift</button>
-                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.startGame(0);">🔄 Play Campaign Again</button>
+                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startEndless();">Explore Endless Rift</button>
+                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.startGame(0);">Replay Campaign</button>
                 </div>
             </div>
         </div>
@@ -264,12 +267,12 @@
         <!-- Helper Legend Footer -->
         <div class="helper-legend">
             <div class="legend-items">
-                <span class="legend-chip">🔴 Ruby (Explosive)</span>
-                <span class="legend-chip">🟣 Amethyst (Armored)</span>
-                <span class="legend-chip">🔵 Sapphire (Resonance)</span>
-                <span class="legend-chip">🟠 Amber (Fracture)</span>
-                <span class="legend-chip">🟢 Emerald (Speed)</span>
-                <span class="legend-chip">🟡 Gold (Drop)</span>
+                <span class="legend-chip"><span class="swatch swatch-ruby"></span> Ruby (Explosive)</span>
+                <span class="legend-chip"><span class="swatch swatch-amethyst"></span> Amethyst (Armored)</span>
+                <span class="legend-chip"><span class="swatch swatch-sapphire"></span> Sapphire (Resonance)</span>
+                <span class="legend-chip"><span class="swatch swatch-amber"></span> Amber (Fracture)</span>
+                <span class="legend-chip"><span class="swatch swatch-emerald"></span> Emerald (Speed)</span>
+                <span class="legend-chip"><span class="swatch swatch-gold"></span> Gold (Drop)</span>
             </div>
             <div>
                 <span>[Mouse / Touch / A-D]: Move &bull; [Space / Click / Tap]: Launch &bull; [P]: Pause &bull; [`]: Dev Tools</span>

@@ -124,9 +124,11 @@ class Game {
 
         this.setupEventListeners();
         this.setupCentralizedEventBuses();
+        this.logo3d = new Sketchoid3DLogo(document.getElementById('sketchoid-3d-logo'));
         this.themeToggle = new ThemeToggle(document.getElementById('theme-toggle-btn'), this);
         this.loadLevel(0);
         this.updateHUD();
+        ModalArtRenderer.drawHeaderDiorama(document.getElementById('menu-art-canvas'), 'menu');
     }
 
     createFallbackRenderer() {
@@ -631,6 +633,7 @@ class Game {
         this.state = 'MENU';
         this.hideAllModals();
         document.getElementById('modalMenu')?.classList.remove('hidden');
+        ModalArtRenderer.drawHeaderDiorama(document.getElementById('menu-art-canvas'), 'menu');
         this.loadLevel(0);
         this.updateHUD();
     }
@@ -639,6 +642,7 @@ class Game {
         if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
             document.getElementById('modalPause')?.classList.remove('hidden');
+            ModalArtRenderer.drawHeaderDiorama(document.getElementById('pause-art-canvas'), 'pause');
         } else if (this.state === 'PAUSED') {
             this.state = 'PLAYING';
             document.getElementById('modalPause')?.classList.add('hidden');
@@ -826,6 +830,7 @@ class Game {
             setTimeout(() => {
                 if (this.state === 'LEVEL_CLEAR') {
                     document.getElementById('modalLevelClear')?.classList.remove('hidden');
+                    ModalArtRenderer.drawHeaderDiorama(document.getElementById('clear-art-canvas'), 'clear');
                     const cScore = document.getElementById('clearScore');
                     const cCombo = document.getElementById('clearCombo');
                     const cStars = document.getElementById('clearStarsDisplay');
@@ -834,7 +839,7 @@ class Game {
 
                     if (cScore) cScore.innerText = this.score.toLocaleString();
                     if (cCombo) cCombo.innerText = `${this.maxComboStreak}x`;
-                    if (cInk) cInk.innerText = `+${earnedInk} 🖋️`;
+                    if (cInk) cInk.innerText = `+${earnedInk} Ink`;
                     if (cXp) cXp.innerText = `+${earnedXp} XP`;
 
                     if (cStars) {
@@ -843,7 +848,7 @@ class Game {
                         for (let s = 0; s < 3; s++) {
                             starText += s < count ? '★ ' : '☆ ';
                         }
-                        cStars.innerText = starText.trim();
+                        cStars.innerText = `[ ${starText.trim()} ]`;
                     }
                 }
             }, 500);
@@ -873,6 +878,7 @@ class Game {
             window.telemetry?.track('game_over', { levelId: this.currentLevel.id, score: this.score });
 
             document.getElementById('modalGameOver')?.classList.remove('hidden');
+            ModalArtRenderer.drawHeaderDiorama(document.getElementById('gameover-art-canvas'), 'gameover');
             const goScore = document.getElementById('gameOverFinalScore');
             const goStyle = document.getElementById('gameOverStyleScore');
             const goCombo = document.getElementById('gameOverMaxCombo');
@@ -882,7 +888,7 @@ class Game {
             if (goScore) goScore.innerText = this.score.toLocaleString();
             if (goStyle) goStyle.innerText = this.styleScore.toLocaleString();
             if (goCombo) goCombo.innerText = `${this.maxComboStreak}x`;
-            if (goInk) goInk.innerText = `+${this.sessionInkEarned} 🖋️`;
+            if (goInk) goInk.innerText = `+${this.sessionInkEarned} Ink`;
             if (goXp) goXp.innerText = `+${this.sessionXpEarned} XP`;
         } else {
             this.paddle.reset(this.width, this.height);
@@ -1092,9 +1098,9 @@ class Game {
         if (levelElem && window.progression) levelElem.innerText = `LVL ${window.progression.data.player.level}`;
 
         if (livesElem) {
-            let hearts = '';
-            for (let i = 0; i < this.lives; i++) hearts += '❤️ ';
-            livesElem.innerText = hearts || '💀';
+            let pips = '';
+            for (let i = 0; i < this.lives; i++) pips += '■ ';
+            livesElem.innerText = `[ ${pips.trim() || 'EXPENDED'} ]`;
         }
 
         if (comboElem && comboMultiplierElem) {
@@ -1321,7 +1327,7 @@ class Game {
                 textContainer.innerHTML = `
                     <div class="collection-title">${ach.name}</div>
                     <div class="collection-desc">${ach.desc}</div>
-                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981; font-weight: bold;">${completed ? '🏅 COMPLETED' : `+${ach.inkReward} 🖋️ &bull; +${ach.xpReward} XP`}</div>
+                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981; font-weight: bold;">${completed ? '[ CERTIFIED ]' : `+${ach.inkReward} Ink &bull; +${ach.xpReward} XP`}</div>
                 `;
                 card.appendChild(textContainer);
                 this.attachTactilePhysics(card);
@@ -1334,7 +1340,7 @@ class Game {
             const skinHeader = document.createElement('div');
             skinHeader.className = 'cosmetic-section-header';
             skinHeader.style.gridColumn = '1 / -1';
-            skinHeader.innerHTML = `<h3>📐 PADDLE SKINS (Select 1)</h3>`;
+            skinHeader.innerHTML = `<h3>PADDLE SKINS (Select 1)</h3>`;
             grid.appendChild(skinHeader);
 
             for (const skin of window.progression.skins) {
@@ -1353,7 +1359,7 @@ class Game {
                 textContainer.innerHTML = `
                     <div class="collection-title">${skin.name}</div>
                     <div class="collection-desc">${skin.desc}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} 🖋️)`)}</button>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
 
@@ -1378,7 +1384,7 @@ class Game {
             trailHeader.className = 'cosmetic-section-header';
             trailHeader.style.gridColumn = '1 / -1';
             trailHeader.style.marginTop = '12px';
-            trailHeader.innerHTML = `<h3>🌠 BALL TRAILS (Select 1)</h3>`;
+            trailHeader.innerHTML = `<h3>BALL TRAILS (Select 1)</h3>`;
             grid.appendChild(trailHeader);
 
             for (const trail of window.progression.trails) {
@@ -1397,7 +1403,7 @@ class Game {
                 textContainer.innerHTML = `
                     <div class="collection-title">${trail.name}</div>
                     <div class="collection-desc">${trail.desc}</div>
-                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} 🖋️)`)}</button>
+                    <button class="btn-sketch btn-small" style="margin-top: 8px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${trail.cost} Ink)`)}</button>
                 `;
                 card.appendChild(textContainer);
 

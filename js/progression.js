@@ -322,14 +322,14 @@ class ProgressionManager {
         this.save();
         window.soundEngine?.playLevelClear();
         window.haptics?.success();
-        window.particleSystem?.addFloatingText('🔓 DEV MODE: EVERYTHING UNLOCKED! (9999 🖋️)', 400, 200, '#fbbf24', 2.0, true);
+        window.particleSystem?.addFloatingText('DEV MODE: EVERYTHING UNLOCKED (9999 Ink)', 400, 200, '#fbbf24', 2.0, true);
     }
 
     resetDevMode() {
         this.data = this.getDefaultSaveData();
         this.save();
         window.soundEngine?.playWallTick();
-        window.particleSystem?.addFloatingText('🔄 SAVE DATA RESET TO DEFAULT', 400, 200, '#ef4444', 1.8, true);
+        window.particleSystem?.addFloatingText('SAVE DATA RESET TO DEFAULT', 400, 200, '#ef4444', 1.8, true);
     }
 }
 
