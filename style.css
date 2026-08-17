@@ -125,19 +125,19 @@ header {
     border-radius: 8px;
     cursor: pointer;
     box-shadow: 2px 3px 0px var(--border-sketch);
-    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.2s ease;
+    transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.18s ease, background-color 0.2s ease;
     display: inline-flex;
     align-items: center;
     gap: 5px;
 }
 
 .btn-sketch:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 4px 0px var(--border-sketch);
+    transform: translate(-2px, -2px) scale(1.03);
+    box-shadow: 4px 5px 0px var(--border-sketch);
 }
 
 .btn-sketch:active {
-    transform: translate(2px, 2px);
+    transform: translate(2px, 2px) scale(0.97);
     box-shadow: 0px 0px 0px var(--border-sketch);
 }
 

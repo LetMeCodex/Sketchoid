@@ -255,7 +255,7 @@ class Game {
 
                 if (this.isCrystalFrenzy) styleMultiplier *= 1.5;
 
-                window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
+                window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id, ball.speed);
 
                 if (brick.typeKey === 'SAPPHIRE') {
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.35);
@@ -887,6 +887,9 @@ class Game {
 
         const effectiveDt = dt * this.timeScale;
         const timeNow = performance.now() / 1000;
+
+        // Drive Dynamic 5-Layer Adaptive Soundtrack
+        window.soundEngine?.updateMusic(dt, this.comboStreak, this.isCrystalFrenzy, !!(this.boss && this.boss.isAlive), this.state === 'PLAYING');
 
         this.sketchbook.update(dt);
         window.challengeManager?.update(effectiveDt, this);
