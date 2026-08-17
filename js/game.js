@@ -1,6 +1,7 @@
 /**
  * SKETCHOID Main Game Engine & Controller (Phase 3 Full Universe)
- * Living Sketchbook Renderer, Dynamic Stage Evolution, Interactive Geometry, and Boss Battles (Arch-Pencil)
+ * Living Sketchbook Renderer, Dynamic Stage Evolution, Page Turn Mutation,
+ * Interactive Geometry, Boss Battles (Arch-Pencil), Challenges, and Collection Unlocks
  */
 
 const THEMES = {
@@ -123,10 +124,6 @@ class Game {
         this.slowmoTimer = 0;
         this.timeScale = 1.0;
 
-        // Boiling seed for canvas frame
-        this.borderSeed = 42;
-        this.borderSeedTimer = 0;
-
         // Frame timing & fixed sub-stepping accumulator
         this.lastTime = performance.now();
         this.fixedTimeStep = 1 / 120;
@@ -231,6 +228,7 @@ class Game {
                 this.comboStreak++;
                 if (this.comboStreak > this.maxComboStreak) {
                     this.maxComboStreak = this.comboStreak;
+                    window.progression?.recordStat('highestCombo', this.maxComboStreak);
                 }
                 this.comboMultiplier = 1 + Math.floor(this.comboStreak / 3);
 
@@ -259,7 +257,6 @@ class Game {
 
                 window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
 
-                // Material Behaviors
                 if (brick.typeKey === 'SAPPHIRE') {
                     ball.speed = Math.min(ball.maxSpeed, ball.speed + 0.35);
                     window.particleSystem?.createLaserSparks(hitResult.contactX, hitResult.contactY, '#38bdf8', 6);
@@ -271,12 +268,16 @@ class Game {
                 }
 
                 if (destroyed) {
+                    window.progression?.recordStat('bricksBroken', 1);
+
                     const earnedPts = Math.round(brick.score * this.comboMultiplier * speedBonus * styleMultiplier);
                     this.addScore(earnedPts);
 
                     window.soundEngine?.playExplosion(brick.isExplosive);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
-                    this.sketchbook.addInkSplatter(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.strokeColor, 12);
+                    
+                    const splatSize = window.challengeManager?.activeChallenge?.heavyInk ? 24 : 12;
+                    this.sketchbook.addInkSplatter(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.strokeColor, splatSize);
 
                     if (brick.typeKey === 'AMETHYST') {
                         this.physicsWorld.hitStop.trigger(50);
@@ -294,7 +295,7 @@ class Game {
                     const comboText = styleCallout ? `${styleCallout} +${earnedPts}` : (this.comboMultiplier > 1 ? `+${earnedPts} (x${this.comboMultiplier})` : `+${earnedPts}`);
                     window.particleSystem?.addFloatingText(comboText, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, styleCallout ? 1.35 : 1.0, !!styleCallout);
 
-                    if (brick.dropsPowerup) {
+                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
                         window.soundEngine?.playPowerupSpawn();
                         this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                     }
@@ -322,6 +323,7 @@ class Game {
                 window.particleSystem?.addFloatingText('+250 BOSS HIT!', hitX, hitY - 20, '#fbbf24', 1.4, true);
 
                 if (defeated) {
+                    window.progression?.recordStat('bossDefeated', 1);
                     this.camera.flash('#fbbf24', 0.5);
                     this.camera.impactZoom(1.08);
                     window.soundEngine?.playLevelClear();
@@ -348,6 +350,7 @@ class Game {
                 this.updateHUD();
             } else if (type === 'nearMiss') {
                 const { x, y } = payload;
+                window.progression?.recordStat('nearMisses', 1);
                 this.addScore(50);
                 this.camera.addTrauma(0.08);
                 window.soundEngine?.playWallTick();
@@ -358,13 +361,16 @@ class Game {
                 const { laser, brick, destroyed } = payload;
                 window.particleSystem?.createLaserSparks(laser.x, laser.y, '#ff0055', 6);
                 if (destroyed) {
+                    window.progression?.recordStat('bricksBroken', 1);
                     const earnedPts = Math.round(brick.score * this.comboMultiplier);
                     this.addScore(earnedPts);
                     window.soundEngine?.playExplosion(brick.isExplosive);
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
                     window.particleSystem?.addFloatingText(`+${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.0);
                     if (brick.isExplosive) this.triggerRubyNuke(brick);
-                    if (brick.dropsPowerup) this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
+                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
+                        this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
+                    }
                     this.checkLevelClear();
                 } else {
                     window.soundEngine?.playBrickChime(this.comboStreak, brick.config.id);
@@ -501,6 +507,7 @@ class Game {
     }
 
     startGame(levelIdx = 0) {
+        window.challengeManager.activeChallenge = null;
         this.state = 'PLAYING';
         this.score = 0;
         this.lives = 3;
@@ -518,6 +525,7 @@ class Game {
     }
 
     startEndless() {
+        window.challengeManager.activeChallenge = null;
         this.state = 'PLAYING';
         this.score = 0;
         this.lives = 3;
@@ -535,8 +543,13 @@ class Game {
     }
 
     restartCurrentGame() {
-        if (this.isEndless) this.startEndless();
-        else this.startGame(this.levelIndex);
+        if (window.challengeManager.activeChallenge) {
+            window.challengeManager.startChallenge(window.challengeManager.activeChallenge.id, this);
+        } else if (this.isEndless) {
+            this.startEndless();
+        } else {
+            this.startGame(this.levelIndex);
+        }
     }
 
     showMenu() {
@@ -594,10 +607,8 @@ class Game {
             this.currentLevel = levelData;
         }
 
-        // Set Sketchbook Stage Evolution
         this.sketchbook.setStage(this.currentLevel.stageNumber || 1);
 
-        // Load Interactive Level Geometry
         if (this.currentLevel.geometry) {
             if (this.currentLevel.geometry.windmills) {
                 for (const w of this.currentLevel.geometry.windmills) {
@@ -616,19 +627,17 @@ class Game {
             }
         }
 
-        // Instantiate Boss if present
         if (this.currentLevel.hasBoss) {
             this.boss = new ArchPencilBoss(this.width, this.height);
         }
 
-        // Build bricks matrix
         this.bricks = [];
         const rows = this.currentLevel.rows;
         const totalRows = rows.length;
         const totalCols = rows[0].length;
 
         const brickMargin = 5;
-        const topOffset = this.boss ? 150 : 70; // Lower brick placement if Boss is above
+        const topOffset = this.boss ? 150 : 70;
         const sidePadding = 40;
         const totalUsableWidth = this.width - sidePadding * 2;
         const brickW = (totalUsableWidth - (totalCols - 1) * brickMargin) / totalCols;
@@ -663,11 +672,16 @@ class Game {
     }
 
     nextLevel() {
+        this.hideAllModals();
+        window.challengeManager.onStageCleared(this);
+        window.progression?.recordStat('stagesCleared', 1);
+
         if (this.isEndless) {
             this.levelIndex++;
-            this.loadLevel(this.levelIndex);
-            this.state = 'PLAYING';
-            this.hideAllModals();
+            this.sketchbook.triggerPageTurn(() => {
+                this.loadLevel(this.levelIndex);
+                this.state = 'PLAYING';
+            });
         } else {
             this.levelIndex++;
             if (this.levelIndex >= window.LEVELS.length) {
@@ -677,9 +691,10 @@ class Game {
                 const vicScore = document.getElementById('victoryFinalScore');
                 if (vicScore) vicScore.innerText = this.score;
             } else {
-                this.loadLevel(this.levelIndex);
-                this.state = 'PLAYING';
-                this.hideAllModals();
+                this.sketchbook.triggerPageTurn(() => {
+                    this.loadLevel(this.levelIndex);
+                    this.state = 'PLAYING';
+                });
             }
         }
         this.updateHUD();
@@ -716,10 +731,15 @@ class Game {
     }
 
     handleBallLost() {
+        if (window.challengeManager?.activeChallenge?.flawless) {
+            this.lives = 0;
+        } else {
+            this.lives--;
+        }
+
         window.soundEngine?.playBallLost();
         this.camera.addTrauma(0.4);
         this.camera.flash('#ef4444', 0.25);
-        this.lives--;
         this.comboStreak = 0;
         this.comboMultiplier = 1;
         this.isCrystalFrenzy = false;
@@ -823,7 +843,7 @@ class Game {
                         const earnedPts = Math.round(brick.score * this.comboMultiplier * 2.0);
                         this.addScore(earnedPts);
                         window.particleSystem?.addFloatingText(`CHAIN! +${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.25, true);
-                        if (brick.dropsPowerup) {
+                        if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
                             this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                         }
                     }
@@ -833,14 +853,12 @@ class Game {
     }
 
     update(dt) {
-        // Hit-Stop Frame Freeze
         const isFrozen = this.physicsWorld.hitStop.update(dt);
         if (isFrozen) {
             this.camera.update(dt);
             return;
         }
 
-        // Chrono SlowMo
         if (this.slowmoTimer > 0) {
             this.slowmoTimer -= dt;
             this.timeScale = 0.35;
@@ -855,14 +873,8 @@ class Game {
         const effectiveDt = dt * this.timeScale;
         const timeNow = performance.now() / 1000;
 
-        // Sketchbook living ink update
         this.sketchbook.update(dt);
-
-        this.borderSeedTimer += dt;
-        if (this.borderSeedTimer > 0.08) {
-            this.borderSeedTimer = 0;
-            this.borderSeed = (this.borderSeed + 223) % 10000;
-        }
+        window.challengeManager?.update(effectiveDt, this);
 
         if (this.state === 'PLAYING') {
             const paddleDt = this.slowmoTimer > 0 ? dt * 0.85 : effectiveDt;
@@ -872,7 +884,6 @@ class Game {
             for (const brick of this.bricks) brick.update(effectiveDt);
             this.geometryManager.update(effectiveDt, this.balls);
 
-            // Update Boss AI
             if (this.boss && this.boss.isAlive) {
                 this.boss.update(effectiveDt, this.bricks, this.paddle);
             }
@@ -887,7 +898,6 @@ class Game {
                 if (!this.powerups[i].isAlive) this.powerups.splice(i, 1);
             }
 
-            // Sub-stepped Physics Solver via PhysicsWorld
             const subSteps = 4;
             const subDt = effectiveDt / subSteps;
             for (let s = 0; s < subSteps; s++) {
@@ -980,66 +990,40 @@ class Game {
         const rc = this.rc;
         const theme = this.theme;
 
-        // Clear canvas
         ctx.fillStyle = theme.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // 1. Begin Camera2D Pipeline (Trauma, Recoil, Zoom)
         this.camera.begin(ctx);
 
-        // 2. Draw Living Sketchbook Layers (Binder rings, margin notes, coffee stains, ink splatters)
         this.sketchbook.drawBackgroundLayers(ctx, rc, theme);
 
-        // 3. Draw Arena Border
         rc.rectangle(4, 4, this.width - 8, this.height - 8, {
-            seed: this.borderSeed,
+            seed: 42 + this.sketchbook.boilSeedOffset,
             roughness: 1.6,
             bowing: 1.8,
             stroke: theme.borderStroke,
             strokeWidth: 3
         });
 
-        // 4. Draw Interactive Level Geometry (Windmills, Portals, Gravity Vortexes)
         this.geometryManager.draw(ctx, rc, theme);
-
-        // 5. Draw Safety Trampoline Net
         this.safetyNet.draw(ctx, rc, theme);
 
-        // 6. Draw Bricks
-        for (const brick of this.bricks) {
-            brick.draw(ctx, rc, theme);
-        }
+        for (const brick of this.bricks) brick.draw(ctx, rc, theme);
 
-        // 7. Draw Boss (Arch-Pencil)
         if (this.boss && this.boss.isAlive) {
             this.boss.draw(ctx, rc, theme);
         }
 
-        // 8. Draw Powerups
-        for (const pow of this.powerups) {
-            pow.draw(ctx, rc, theme);
-        }
+        for (const pow of this.powerups) pow.draw(ctx, rc, theme);
+        for (const laser of this.lasers) laser.draw(ctx, rc, theme);
 
-        // 9. Draw Laser Beams
-        for (const laser of this.lasers) {
-            laser.draw(ctx, rc, theme);
-        }
-
-        // 10. Draw Launch Aim Guide
         this.drawLaunchAimGuide(ctx, rc, theme);
-
-        // 11. Draw Paddle
         this.paddle.draw(ctx, rc, theme);
 
-        // 12. Draw Kinetic Balls
-        for (const ball of this.balls) {
-            ball.draw(ctx, rc, theme);
-        }
+        for (const ball of this.balls) ball.draw(ctx, rc, theme);
 
-        // 13. Draw Particle Debris & Floating Scores
         window.particleSystem?.draw(ctx, rc, theme);
 
-        // 14. End Camera Transformation Pipeline & Screen Flash
         this.camera.end(ctx);
     }
 

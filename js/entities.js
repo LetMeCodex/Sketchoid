@@ -1,8 +1,7 @@
 /**
- * SKETCHOID Game Entities & Material Destruction Engine (Phase 2 Upgrade)
- * Progressive Brick Damage States (Intact -> Damaged -> Cracked -> Fractured -> Debris),
- * Material Physics (Ruby Chains, Amethyst Armor, Emerald Velocity, Amber Weakpoints),
- * Laser Overheating Gauge, and Reworked Powerups.
+ * SKETCHOID Game Entities & Customized Skins (Progression & Identity Upgrade)
+ * Customizable Paddle Skins (Metric Ruler, Calligraphy Quill, Golden Stylus)
+ * and Dynamic Ball Trails (Charcoal, Rainbow Spectrum, Quantum Nebula, Electric Neon)
  */
 
 class Paddle {
@@ -19,11 +18,9 @@ class Paddle {
         this.vx = 0;
         this.prevX = this.x;
 
-        // Swing momentum history buffer
         this.posHistory = [];
         this.swingVelocity = 0;
 
-        // Elastic squash & stretch spring
         this.scaleX = 1.0;
         this.scaleY = 1.0;
         this.targetScaleX = 1.0;
@@ -32,15 +29,13 @@ class Paddle {
         this.springVelY = 0;
         this.tilt = 0;
 
-        // Boiling seed
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
-        // Powerups & Laser Heat Gauge
         this.hasLaser = false;
         this.laserTimer = 0;
         this.laserCooldown = 0;
-        this.laserHeat = 0; // 0 to 100
+        this.laserHeat = 0;
         this.laserOverheated = false;
         this.laserTurretRecoilLeft = 0;
         this.laserTurretRecoilRight = 0;
@@ -90,7 +85,6 @@ class Paddle {
         this.x += (this.targetX - this.x) * 0.44;
         this.vx = this.x - this.prevX;
 
-        // Record swing velocity
         const now = performance.now();
         this.posHistory.push({ x: this.x, time: now });
         if (this.posHistory.length > 5) this.posHistory.shift();
@@ -104,11 +98,9 @@ class Paddle {
             }
         }
 
-        // Tilt
         const targetTilt = Math.max(-0.16, Math.min(0.16, this.vx * 0.02));
         this.tilt += (targetTilt - this.tilt) * 0.25;
 
-        // Spring
         const k = 0.26;
         const damping = 0.72;
         const forceX = (this.targetScaleX - this.scaleX) * k;
@@ -119,7 +111,6 @@ class Paddle {
         this.springVelY = (this.springVelY + forceY) * damping;
         this.scaleY += this.springVelY;
 
-        // Wide Paddle Width
         this.width += (this.targetWidth - this.width) * 0.16;
         if (this.hasWide) {
             this.wideTimer -= dt;
@@ -132,12 +123,10 @@ class Paddle {
             this.targetWidth = this.baseWidth;
         }
 
-        // Laser Heat & Overheat Management
         if (this.hasLaser) {
             this.laserTimer -= dt;
             if (this.laserCooldown > 0) this.laserCooldown -= dt;
             
-            // Heat cooldown
             this.laserHeat = Math.max(0, this.laserHeat - dt * 38);
             if (this.laserOverheated && this.laserHeat <= 20) {
                 this.laserOverheated = false;
@@ -150,11 +139,9 @@ class Paddle {
             }
         }
 
-        // Recoil
         this.laserTurretRecoilLeft = Math.max(0, this.laserTurretRecoilLeft - dt * 25);
         this.laserTurretRecoilRight = Math.max(0, this.laserTurretRecoilRight - dt * 25);
 
-        // Boiling Seed
         this.seedTimer += dt;
         if (this.seedTimer > 0.08) {
             this.seedTimer = 0;
@@ -229,33 +216,95 @@ class Paddle {
         const halfW = w / 2;
         const halfH = h / 2;
 
-        const paddleFill = this.hasLaser 
-            ? (this.laserOverheated ? '#991b1b' : '#f43f5e') 
-            : (this.hasWide ? '#3b82f6' : theme.paddleFill);
-        const paddleStroke = theme.paddleStroke;
+        const skin = (window.progression && window.progression.data.selectedSkin) || 'classic';
 
-        rc.rectangle(-halfW, -halfH, w, h, {
-            seed: this.seed,
-            roughness: 1.4,
-            bowing: 1.5,
-            stroke: paddleStroke,
-            strokeWidth: 2.5,
-            fill: paddleFill,
-            fillStyle: 'zigzag',
-            fillWeight: 1.8,
-            hachureAngle: -25,
-            hachureGap: 5
-        });
+        // 1. Render Specific Paddle Skin
+        if (skin === 'ruler') {
+            // Architect Metric Wooden Ruler
+            rc.rectangle(-halfW, -halfH, w, h, {
+                seed: this.seed,
+                roughness: 1.1,
+                stroke: '#78350f',
+                strokeWidth: 2,
+                fill: '#fde68a',
+                fillStyle: 'solid'
+            });
 
-        // Center grip ornament
-        rc.ellipse(0, 0, 18, 10, {
-            seed: this.seed + 1,
-            roughness: 1.2,
-            stroke: theme.paddleStroke,
-            strokeWidth: 1.5,
-            fill: '#ffffff',
-            fillStyle: 'solid'
-        });
+            // Metric tick marks
+            const numTicks = 12;
+            const tickSpacing = (w - 16) / numTicks;
+            for (let i = 0; i <= numTicks; i++) {
+                const tx = -halfW + 8 + i * tickSpacing;
+                const isMajor = i % 3 === 0;
+                rc.line(tx, -halfH, tx, -halfH + (isMajor ? 7 : 4), {
+                    seed: this.seed + i,
+                    stroke: '#78350f',
+                    strokeWidth: isMajor ? 1.5 : 1.0
+                });
+            }
+        } else if (skin === 'gold') {
+            // 24K Golden Stylus
+            rc.rectangle(-halfW, -halfH, w, h, {
+                seed: this.seed,
+                roughness: 1.2,
+                stroke: '#b45309',
+                strokeWidth: 2.2,
+                fill: '#fbbf24',
+                fillStyle: 'cross-hatch',
+                fillWeight: 1.8,
+                hachureGap: 3
+            });
+            rc.circle(0, 0, 10, {
+                seed: this.seed + 1,
+                stroke: '#ffffff',
+                fill: '#ffffff',
+                fillStyle: 'solid'
+            });
+        } else if (skin === 'quill') {
+            // Calligraphy Quill
+            rc.ellipse(0, 0, w, h * 1.1, {
+                seed: this.seed,
+                roughness: 1.5,
+                stroke: '#1e293b',
+                strokeWidth: 2,
+                fill: '#f8fafc',
+                fillStyle: 'zigzag'
+            });
+            // Gold Nib
+            rc.polygon([[-halfW, 0], [-halfW - 8, -4], [-halfW - 8, 4]], {
+                seed: this.seed + 2,
+                stroke: '#b45309',
+                fill: '#fbbf24',
+                fillStyle: 'solid'
+            });
+        } else {
+            // Classic Sketch Paddle
+            const paddleFill = this.hasLaser 
+                ? (this.laserOverheated ? '#991b1b' : '#f43f5e') 
+                : (this.hasWide ? '#3b82f6' : theme.paddleFill);
+
+            rc.rectangle(-halfW, -halfH, w, h, {
+                seed: this.seed,
+                roughness: 1.4,
+                bowing: 1.5,
+                stroke: theme.paddleStroke,
+                strokeWidth: 2.5,
+                fill: paddleFill,
+                fillStyle: 'zigzag',
+                fillWeight: 1.8,
+                hachureAngle: -25,
+                hachureGap: 5
+            });
+
+            rc.ellipse(0, 0, 18, 10, {
+                seed: this.seed + 1,
+                roughness: 1.2,
+                stroke: theme.paddleStroke,
+                strokeWidth: 1.5,
+                fill: '#ffffff',
+                fillStyle: 'solid'
+            });
+        }
 
         // Laser Turrets & Heat Gauge
         if (this.hasLaser) {
@@ -277,7 +326,6 @@ class Paddle {
                 fillStyle: 'solid'
             });
 
-            // Hand-drawn heat bar
             if (this.laserHeat > 0) {
                 const heatWidth = (w * 0.7) * (this.laserHeat / 100);
                 rc.line(-w * 0.35, halfH + 4, -w * 0.35 + heatWidth, halfH + 4, {
@@ -333,7 +381,7 @@ class Ball {
         this.vy = vy;
 
         this.trail = [];
-        this.maxTrail = 8;
+        this.maxTrail = 9;
         this.seed = Math.floor(Math.random() * 1000);
         this.seedTimer = 0;
 
@@ -402,7 +450,6 @@ class Ball {
 
         this.spin *= this.spinDecay;
 
-        // Boundaries
         if (this.x - this.radius <= 0) {
             this.x = this.radius;
             this.vx = Math.abs(this.vx);
@@ -474,15 +521,29 @@ class Ball {
     draw(ctx, rc, theme) {
         ctx.save();
 
-        // Motion Trails
+        const trailType = (window.progression && window.progression.data.selectedTrail) || 'charcoal';
+
+        // Render Motion Trails based on selected Trail Skin
         for (let i = 0; i < this.trail.length; i++) {
             const t = this.trail[i];
-            const trailAlpha = (1 - i / this.trail.length) * 0.45;
-            const r = this.radius * (1 - i / (this.trail.length * 1.4));
+            const trailAlpha = (1 - i / this.trail.length) * 0.55;
+            const r = this.radius * (1 - i / (this.trail.length * 1.35));
             
-            ctx.fillStyle = this.isFireball ? `rgba(239, 68, 68, ${trailAlpha})` : theme.ballTrail;
+            if (this.isFireball) {
+                ctx.fillStyle = `rgba(239, 68, 68, ${trailAlpha})`;
+            } else if (trailType === 'rainbow') {
+                const hue = (Date.now() / 8 + i * 25) % 360;
+                ctx.fillStyle = `hsla(${hue}, 90%, 60%, ${trailAlpha})`;
+            } else if (trailType === 'nebula') {
+                ctx.fillStyle = i % 2 === 0 ? `rgba(168, 85, 247, ${trailAlpha})` : `rgba(56, 189, 248, ${trailAlpha})`;
+            } else if (trailType === 'neon') {
+                ctx.fillStyle = `rgba(56, 189, 248, ${trailAlpha})`;
+            } else {
+                ctx.fillStyle = theme.ballTrail;
+            }
+
             ctx.beginPath();
-            ctx.arc(t.x, t.y, Math.max(1, r), 0, Math.PI * 2);
+            ctx.arc(t.x, t.y, Math.max(1.2, r), 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -515,9 +576,6 @@ class Ball {
     }
 }
 
-/**
- * Brick Damage States & Material Physics Engine
- */
 class Brick {
     constructor(x, y, width, height, typeKey) {
         this.x = x;
@@ -535,7 +593,6 @@ class Brick {
         this.dropsPowerup = !!this.config.dropsPowerup;
         this.unbreakable = !!this.config.unbreakable;
 
-        // Damage State: INTACT (100%), DAMAGED (75%), CRACKED (50%), FRACTURED (25%), DESTROYED (0%)
         this.damageState = 'INTACT';
         this.hitFlashTimer = 0;
         this.seed = Math.floor(Math.random() * 1000);
@@ -600,7 +657,6 @@ class Brick {
         this.hp -= dmg;
         this.hitFlashTimer = 0.16;
 
-        // Update Damage State
         const ratio = this.hp / this.maxHp;
         if (ratio >= 0.75) this.damageState = 'DAMAGED';
         else if (ratio >= 0.50) this.damageState = 'CRACKED';
@@ -611,7 +667,6 @@ class Brick {
             this.armorPlates = Math.max(0, this.hp);
         }
 
-        // Generate procedural crack lines based on damage state
         if (this.hp > 0 && this.hp < this.maxHp) {
             const crackCount = (this.maxHp - this.hp) * 3;
             this.crackLines = [];
@@ -646,7 +701,6 @@ class Brick {
         let strokeColor = isFlashing ? '#ffffff' : this.config.strokeColor;
         let fillStyle = this.config.fillStyle;
 
-        // Shading modifications based on damage state
         if (this.damageState === 'CRACKED') {
             fillStyle = 'cross-hatch';
         } else if (this.damageState === 'FRACTURED') {
@@ -658,7 +712,6 @@ class Brick {
             customSeed = (this.seed + Math.floor(Date.now() / 150)) % 1000;
         }
 
-        // Draw Brick Body
         rc.rectangle(this.x, this.y, this.width, this.height, {
             seed: customSeed,
             roughness: this.damageState === 'FRACTURED' ? 2.2 : 1.5,
@@ -672,7 +725,6 @@ class Brick {
             hachureGap: 4
         });
 
-        // Amethyst Armored Plates Visual
         if (this.typeKey === 'AMETHYST' && this.armorPlates > 0) {
             for (let p = 0; p < this.armorPlates; p++) {
                 const px = this.x + 4 + p * (this.width / 4 - 2);
@@ -687,7 +739,6 @@ class Brick {
             }
         }
 
-        // Procedural Crack Overlays
         if (this.crackLines.length > 0) {
             for (const crack of this.crackLines) {
                 rc.line(crack.sx, crack.sy, crack.ex, crack.ey, {
@@ -698,7 +749,6 @@ class Brick {
             }
         }
 
-        // Distinct Material Icons
         if (this.typeKey === 'GOLD') {
             ctx.fillStyle = '#b45309';
             ctx.font = 'bold 12px Fredoka, sans-serif';

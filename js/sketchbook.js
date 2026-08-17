@@ -1,6 +1,7 @@
 /**
- * SKETCHOID Living Sketchbook World & Atmosphere Engine
- * Multi-layer canvas renderer with notebook binder rings, margin equations, coffee stains, ink splatters, and stage evolution
+ * SKETCHOID Living Sketchbook World & Atmosphere Engine (Phase 3 Complete)
+ * Multi-layer canvas renderer with notebook binder rings, margin equations, coffee stains,
+ * ink splatters, stage evolution, and 3D Hand-Drawn Page Turn Mutation Transitions
  */
 
 class SketchbookWorld {
@@ -11,12 +12,17 @@ class SketchbookWorld {
 
         // Persistent Ink Splatters on the page
         this.inkSplatters = [];
-        this.maxSplatters = 35;
+        this.maxSplatters = 40;
 
         // Micro-jitter boil cycle (3-frame loop at 12fps)
         this.boilFrame = 0;
         this.boilTimer = 0;
         this.boilSeedOffset = 0;
+
+        // Page Turn Mutation State
+        this.isPageTurning = false;
+        this.pageTurnProgress = 0;
+        this.pageTurnCallback = null;
 
         // Procedural Coffee Ring Stains
         this.coffeeStains = [
@@ -37,6 +43,13 @@ class SketchbookWorld {
 
     setStage(stageNum) {
         this.currentStage = Math.max(1, Math.min(5, stageNum));
+    }
+
+    triggerPageTurn(onCompleteCallback) {
+        this.isPageTurning = true;
+        this.pageTurnProgress = 0;
+        this.pageTurnCallback = onCompleteCallback;
+        window.soundEngine?.playWallTick();
     }
 
     addInkSplatter(x, y, color = '#1e293b', size = 12) {
@@ -70,10 +83,23 @@ class SketchbookWorld {
     update(dt) {
         // 3-Frame Controlled Jitter (12fps)
         this.boilTimer += dt;
-        if (this.boilTimer >= 0.083) { // ~12 FPS
+        if (this.boilTimer >= 0.083) {
             this.boilTimer = 0;
             this.boilFrame = (this.boilFrame + 1) % 3;
             this.boilSeedOffset = this.boilFrame * 313;
+        }
+
+        // Page Turn Animation Sweep
+        if (this.isPageTurning) {
+            this.pageTurnProgress += dt * 1.6; // ~0.65s turn
+            if (this.pageTurnProgress >= 1.0) {
+                this.isPageTurning = false;
+                this.pageTurnProgress = 0;
+                if (this.pageTurnCallback) {
+                    this.pageTurnCallback();
+                    this.pageTurnCallback = null;
+                }
+            }
         }
 
         // Fade ink splatters gradually
@@ -83,9 +109,6 @@ class SketchbookWorld {
         }
     }
 
-    /**
-     * Layer 0 & 1: Draw Notebook Atmosphere, Binder Rings, Coffee Stains, and Margin Annotations
-     */
     drawBackgroundLayers(ctx, rc, theme) {
         ctx.save();
 
@@ -99,13 +122,11 @@ class SketchbookWorld {
 
         for (let i = 0; i < numRings; i++) {
             const hy = 40 + i * spacing;
-            // Metal Binder Ring
             rc.arc(holeX, hy, 18, 14, -Math.PI * 0.7, Math.PI * 0.7, false, {
                 seed: seed + i * 5,
                 stroke: theme.borderStroke,
                 strokeWidth: 2.5
             });
-            // Paper Hole Cutout
             ctx.fillStyle = theme.bgDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.12)';
             ctx.beginPath();
             ctx.arc(holeX, hy, 5, 0, Math.PI * 2);
@@ -178,12 +199,10 @@ class SketchbookWorld {
             ctx.fillStyle = sp.color;
             ctx.globalAlpha = sp.alpha * 0.45;
             
-            // Center splat
             ctx.beginPath();
             ctx.arc(sp.x, sp.y, sp.mainRadius * 0.6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Surrounding droplets
             for (const d of sp.droplets) {
                 ctx.beginPath();
                 ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
@@ -195,7 +214,6 @@ class SketchbookWorld {
         // 7. Stage 5: Torn Reality / Void Creases
         if (stage === 5) {
             ctx.save();
-            // Ripped page seams
             rc.line(marginLineX + 40, 0, marginLineX + 160, this.height * 0.45, {
                 seed: seed + 90,
                 stroke: theme.borderStroke,
@@ -207,7 +225,6 @@ class SketchbookWorld {
                 strokeWidth: 2
             });
 
-            // Void darkness bleeding in
             ctx.fillStyle = theme.bgDark ? 'rgba(0,0,0,0.3)' : 'rgba(30, 27, 75, 0.08)';
             ctx.beginPath();
             ctx.moveTo(this.width - 120, 0);
@@ -217,6 +234,46 @@ class SketchbookWorld {
             ctx.fill();
             ctx.restore();
         }
+
+        // 8. Hand-Drawn 3D Page Turn Sweep Overlay
+        if (this.isPageTurning) {
+            this.drawPageTurnEffect(ctx, rc, theme);
+        }
+
+        ctx.restore();
+    }
+
+    drawPageTurnEffect(ctx, rc, theme) {
+        ctx.save();
+        const p = this.pageTurnProgress;
+        const peelX = this.width * (1.0 - p * 1.1);
+        const curlWidth = 140 * Math.sin(p * Math.PI);
+
+        // Peeling Page Gradient Shadow
+        const shadowGrad = ctx.createLinearGradient(peelX - curlWidth, 0, peelX + 40, 0);
+        shadowGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        shadowGrad.addColorStop(0.7, 'rgba(0,0,0,0.35)');
+        shadowGrad.addColorStop(1, 'rgba(0,0,0,0.6)');
+
+        ctx.fillStyle = shadowGrad;
+        ctx.fillRect(peelX - curlWidth, 0, curlWidth + 40, this.height);
+
+        // Curled Backside Page Surface
+        rc.rectangle(peelX, 0, this.width - peelX + 20, this.height, {
+            seed: 777 + Math.floor(p * 10),
+            roughness: 1.4,
+            stroke: theme.borderStroke,
+            strokeWidth: 3,
+            fill: theme.bgDark ? '#1e293b' : '#f1f5f9',
+            fillStyle: 'solid'
+        });
+
+        // Curled Page Fold Line
+        rc.line(peelX, 0, peelX, this.height, {
+            seed: 888,
+            stroke: theme.borderStroke,
+            strokeWidth: 3.5
+        });
 
         ctx.restore();
     }
