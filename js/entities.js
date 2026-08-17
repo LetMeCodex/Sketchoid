@@ -148,13 +148,15 @@ class Paddle {
         }
     }
 
-    calculateDeflection(ball) {
+    calculateDeflection(ball, comboStreak = 0) {
         const paddleCenter = this.x + this.width / 2;
         const rawOffset = (ball.x - paddleCenter) / (this.width / 2);
         const clampedOffset = Math.max(-0.96, Math.min(0.96, rawOffset));
 
-        const baseAngle = -Math.PI / 2 + clampedOffset * 1.15;
-        const swingInfluence = Math.max(-4.8, Math.min(4.8, this.swingVelocity * 0.30));
+        // Combo-focus precision: higher combos tighten control and increase flick acceleration
+        const focusFactor = Math.min(1.35, 1.0 + comboStreak * 0.025);
+        const baseAngle = -Math.PI / 2 + clampedOffset * (1.12 * focusFactor);
+        const swingInfluence = Math.max(-5.2, Math.min(5.2, this.swingVelocity * 0.32));
         
         let newVx = Math.cos(baseAngle) * ball.speed + swingInfluence;
         let newVy = Math.sin(baseAngle) * ball.speed;
@@ -171,7 +173,7 @@ class Paddle {
         newVx = Math.cos(angle) * ball.speed;
         newVy = Math.sin(angle) * ball.speed;
 
-        const impartedSpin = (swingInfluence * 0.45 + clampedOffset * 0.35);
+        const impartedSpin = (swingInfluence * 0.50 + clampedOffset * 0.40);
 
         return { vx: newVx, vy: newVy, offset: clampedOffset, spin: impartedSpin };
     }

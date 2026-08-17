@@ -46,7 +46,27 @@ class SketchbookWorld {
             { text: "REALITY TORN: CONVERGENCE AT HAND", x: 260, y: 32, stage: 5, angle: 0 }
         ];
 
+        // Paper Degradation & Stress Creases
+        this.paperDamage = 0;
+        this.creases = [];
+        this.maxCreases = 15;
+
         this.initWeather();
+    }
+
+    recordBrickDestroyed(x, y) {
+        this.paperDamage += 1;
+        if (this.creases.length < this.maxCreases && Math.random() < 0.35) {
+            const angle = (Math.random() - 0.5) * 1.5;
+            const length = 12 + Math.random() * 18;
+            this.creases.push({
+                x,
+                y,
+                x2: x + Math.cos(angle) * length,
+                y2: y + Math.sin(angle) * length,
+                alpha: 0.45
+            });
+        }
     }
 
     initWeather() {
@@ -263,7 +283,19 @@ class SketchbookWorld {
         }
         ctx.restore();
 
-        // 6. Persistent Ink Splatters
+        // 6. Persistent Ink Splatters & Paper Creases
+        for (const c of this.creases) {
+            ctx.save();
+            ctx.strokeStyle = theme.borderStroke;
+            ctx.globalAlpha = c.alpha * 0.35;
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(c.x, c.y);
+            ctx.lineTo(c.x2, c.y2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         for (const sp of this.inkSplatters) {
             ctx.save();
             ctx.fillStyle = sp.color;

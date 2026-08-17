@@ -167,7 +167,7 @@ class PhysicsWorld {
         }
     }
 
-    stepSubPhysics(subDt, balls, paddle, bricks, lasers, powerups, safetyNet, geometryManager, boss, timeNow) {
+    stepSubPhysics(subDt, balls, paddle, bricks, lasers, powerups, safetyNet, geometryManager, boss, timeNow, comboStreak = 0) {
         this.rebuildGrid(bricks, paddle, safetyNet);
 
         // 1. Ball vs World & Interactive Geometry
@@ -200,7 +200,7 @@ class PhysicsWorld {
                 ball.x + ball.radius >= paddle.x &&
                 ball.x - ball.radius <= paddle.x + paddle.width) {
 
-                const deflection = paddle.calculateDeflection(ball);
+                const deflection = paddle.calculateDeflection(ball, comboStreak);
                 ball.vx = deflection.vx;
                 ball.vy = deflection.vy;
                 ball.spin = deflection.spin;

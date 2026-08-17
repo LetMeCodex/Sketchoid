@@ -1,6 +1,7 @@
 /**
- * SKETCHOID Level Blueprints & Boss Encounters (Phase 3 Evolution)
- * Integrates Stage Evolution, Interactive Geometry (Windmills, Portals, Gravity Vortexes), and Boss Battles.
+ * SKETCHOID Level Blueprints & 3 Boss Encounters (Phase 2 & Phase 3 Evolution)
+ * Sector 1: Clean Draft, Sector 2: Portal Matrix,
+ * Sector 3: 🧼 The Eraser Boss, Sector 4: 🖋️ The Living Ink Boss, Sector 5: ✏️ The Arch-Pencil Boss!
  */
 
 const BRICK_TYPES = {
@@ -38,13 +39,15 @@ const LEVELS = [
     {
         id: 2,
         stageNumber: 2,
-        name: "Sector 2: The Field Notes",
-        subtitle: "Revolving windmill kinetic deflection & amber fracture bastions",
+        name: "Sector 2: The Portal Matrix",
+        subtitle: "Twin Ink Portals & revolving windmill kinetic deflection",
         geometry: {
             windmills: [
-                { x: 400, y: 260, length: 90, speed: 1.4, color: '#38bdf8' }
+                { x: 400, y: 260, length: 85, speed: 1.4, color: '#38bdf8' }
             ],
-            portals: [],
+            portals: [
+                { entryX: 120, entryY: 280, exitX: 680, exitY: 280, colorA: '#38bdf8', colorB: '#f97316' }
+            ],
             vortexes: []
         },
         hasBoss: false,
@@ -61,16 +64,15 @@ const LEVELS = [
     {
         id: 3,
         stageNumber: 3,
-        name: "Sector 3: The Blueprint Citadel",
-        subtitle: "Twin Ink Portals teleporting kinetic spheres through obsidian vaults",
+        name: "Sector 3: 🧼 The Eraser",
+        subtitle: "BOSS ENCOUNTER: The Void Rub-Out erasing bricks mid-flight!",
         geometry: {
             windmills: [],
-            portals: [
-                { entryX: 130, entryY: 280, exitX: 670, exitY: 280, colorA: '#38bdf8', colorB: '#f97316' }
-            ],
+            portals: [],
             vortexes: []
         },
-        hasBoss: false,
+        hasBoss: true,
+        bossType: 'eraser',
         rows: [
             "......MMMM......",
             "....SSSSSSSS....",
@@ -86,16 +88,17 @@ const LEVELS = [
     {
         id: 4,
         stageNumber: 4,
-        name: "Sector 4: The Ink Bleed",
-        subtitle: "A cosmic Gravity Vortex warping trajectories around the royal crown",
+        name: "Sector 4: 🖋️ The Living Ink",
+        subtitle: "BOSS ENCOUNTER: Corrosive Ink Bleeds constricting your arena!",
         geometry: {
             windmills: [],
             portals: [],
             vortexes: [
-                { x: 400, y: 220, strength: 220, radius: 110, color: '#a855f7' }
-            ],
-            hasBoss: false,
+                { x: 400, y: 240, strength: 200, radius: 100, color: '#a855f7' }
+            ]
         },
+        hasBoss: true,
+        bossType: 'ink',
         rows: [
             "..M.M.MMMM.M.M..",
             "..MMMMMMMMMMMM..",
@@ -120,6 +123,7 @@ const LEVELS = [
             vortexes: []
         },
         hasBoss: true,
+        bossType: 'pencil',
         rows: [
             "RR.MM......MM.RR",
             "SS.AA.GG.GG.AA.SS",
@@ -163,24 +167,25 @@ function generateProceduralLevel(levelNum) {
         rows.push(rowStr);
     }
 
-    const hasWindmill = levelNum % 2 === 0;
-    const hasPortal = levelNum % 3 === 0;
+    const bossTypes = ['eraser', 'ink', 'pencil'];
+    const isBossLevel = levelNum > 0 && levelNum % 3 === 0;
 
     return {
-        id: levelNum,
-        stageNumber: Math.min(5, 1 + Math.floor(levelNum / 2)),
-        name: `Quantum Rift (Wave ${levelNum})`,
-        subtitle: `Procedural crystal matrix with adaptive hazards`,
+        id: `infinite_${levelNum}`,
+        stageNumber: ((levelNum - 1) % 5) + 1,
+        name: isBossLevel ? `Rift ${levelNum}: Boss Convergence` : `Rift ${levelNum}: Procedural Fracture`,
+        subtitle: isBossLevel ? `A chaotic entity has breached the sketchbook boundary!` : `Dynamic geometry at entropy tier ${difficultyFactor.toFixed(2)}`,
+        hasBoss: isBossLevel,
+        bossType: isBossLevel ? bossTypes[levelNum % bossTypes.length] : null,
         geometry: {
-            windmills: hasWindmill ? [{ x: 400, y: 270, length: 85, speed: 1.3, color: '#38bdf8' }] : [],
-            portals: hasPortal ? [{ entryX: 140, entryY: 290, exitX: 660, exitY: 290, colorA: '#38bdf8', colorB: '#f97316' }] : [],
-            vortexes: []
+            windmills: levelNum % 2 === 0 ? [{ x: 400, y: 260, length: 80, speed: 1.5, color: '#38bdf8' }] : [],
+            portals: levelNum % 3 === 0 ? [{ entryX: 120, entryY: 280, exitX: 680, exitY: 280, colorA: '#38bdf8', colorB: '#f97316' }] : [],
+            vortexes: levelNum % 4 === 0 ? [{ x: 400, y: 220, strength: 200, radius: 100, color: '#a855f7' }] : []
         },
-        hasBoss: levelNum % 5 === 0,
-        rows
+        rows: rows
     };
 }
 
-window.LEVELS = LEVELS;
 window.BRICK_TYPES = BRICK_TYPES;
+window.LEVELS = LEVELS;
 window.generateProceduralLevel = generateProceduralLevel;

@@ -278,6 +278,7 @@ class Game {
                     
                     const splatSize = window.challengeManager?.activeChallenge?.heavyInk ? 18 : 10;
                     this.sketchbook.addInkSplatter(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.strokeColor, splatSize);
+                    this.sketchbook.recordBrickDestroyed(brick.x + brick.width / 2, brick.y + brick.height / 2);
 
                     if (brick.typeKey === 'AMETHYST') {
                         this.physicsWorld.hitStop.trigger(30);
@@ -341,6 +342,7 @@ class Game {
                 if (isEdgeFlick) {
                     this.physicsWorld.hitStop.trigger(25);
                     this.camera.impactZoom(1.02);
+                    window.soundEngine?.playPerfectReboundTriad();
                     this.addScore(150);
                     window.particleSystem?.addFloatingText('PERFECT REBOUND! +150', ball.x, this.paddle.y - 25, '#38bdf8', 1.3, true);
                 }
@@ -691,7 +693,14 @@ class Game {
         }
 
         if (this.currentLevel.hasBoss) {
-            this.boss = new ArchPencilBoss(this.width, this.height);
+            const bType = this.currentLevel.bossType || 'pencil';
+            if (bType === 'eraser') {
+                this.boss = new EraserBoss(this.width, this.height);
+            } else if (bType === 'ink') {
+                this.boss = new LivingInkBoss(this.width, this.height);
+            } else {
+                this.boss = new ArchPencilBoss(this.width, this.height);
+            }
         }
 
         this.bricks = [];
@@ -990,7 +999,8 @@ class Game {
                 this.physicsWorld.stepSubPhysics(
                     subDt, this.balls, this.paddle, this.bricks,
                     this.lasers, this.powerups, this.safetyNet,
-                    this.geometryManager, this.boss, timeNow
+                    this.geometryManager, this.boss, timeNow,
+                    this.comboStreak
                 );
             }
 

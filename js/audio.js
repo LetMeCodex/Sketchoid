@@ -351,6 +351,29 @@ class SoundEngine {
         osc.stop(now + 0.25);
     }
 
+    playPerfectReboundTriad() {
+        if (!this.isInitialized || this.isMuted) return;
+
+        const now = this.ctx.currentTime;
+        const triad = [1046.50, 1318.51, 1567.98]; // C6, E6, G6
+        triad.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.03);
+
+            gain.gain.setValueAtTime(0.30, now + idx * 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.03 + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.sfxGain);
+
+            osc.start(now + idx * 0.03);
+            osc.stop(now + idx * 0.03 + 0.35);
+        });
+    }
+
     playExplosion(isNuke = false) {
         if (!this.isInitialized || this.isMuted) return;
 
