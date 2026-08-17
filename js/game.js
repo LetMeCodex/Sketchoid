@@ -124,6 +124,7 @@ class Game {
 
         this.setupEventListeners();
         this.setupCentralizedEventBuses();
+        this.themeToggle = new ThemeToggle(document.getElementById('theme-toggle-btn'), this);
         this.loadLevel(0);
         this.updateHUD();
     }
@@ -452,7 +453,8 @@ class Game {
         document.getElementById('btnNextLevel')?.addEventListener('click', () => this.nextLevel());
         document.getElementById('btnMenu')?.addEventListener('click', () => this.showMenu());
         document.getElementById('btnTheme')?.addEventListener('click', () => this.cycleTheme());
-        document.getElementById('btnMute')?.addEventListener('click', () => this.toggleMute());
+        // Attach Handcrafted 3D Elastic Physics to all sketch buttons
+        document.querySelectorAll('.btn-sketch').forEach(btn => this.attachTactilePhysics(btn));
 
         // Notebook Collection Modal & Dev Tools
         document.getElementById('btnCollection')?.addEventListener('click', () => this.openSketchbookModal('chapters'));
@@ -647,8 +649,7 @@ class Game {
 
         document.body.className = `theme-${this.currentThemeKey}`;
         window.soundEngine?.setPalette(this.currentThemeKey);
-        const themeBtn = document.getElementById('btnTheme');
-        if (themeBtn) themeBtn.innerText = `🎨 ${this.theme.name}`;
+        this.themeToggle?.syncTheme(this.theme.bgDark, true);
     }
 
     loadLevel(index) {
@@ -1185,6 +1186,32 @@ class Game {
         });
     }
 
+    attachTactilePhysics(el) {
+        if (!el) return;
+        el.addEventListener('mouseenter', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: el,
+                    scale: 1.05,
+                    translateY: -3,
+                    duration: 350,
+                    easing: 'easeOutElastic(1, 0.6)'
+                });
+            }
+        });
+        el.addEventListener('mouseleave', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: el,
+                    scale: 1,
+                    translateY: 0,
+                    duration: 300,
+                    easing: 'easeOutElastic(1, 0.6)'
+                });
+            }
+        });
+    }
+
     openSketchbookModal(activeTab = 'chapters') {
         const modal = document.getElementById('modalCollection');
         if (!modal) return;
@@ -1234,6 +1261,7 @@ class Game {
                     <button class="btn-sketch btn-small" style="margin-top: 8px;">Draft Sector</button>
                 `;
                 card.appendChild(textContainer);
+                this.attachTactilePhysics(card);
                 grid.appendChild(card);
 
                 // Draw sector icon
@@ -1259,6 +1287,7 @@ class Game {
                         <div class="collection-desc">${isDiscovered ? item.desc : 'Break crystals or play sectors to discover.'}</div>
                     `;
                     card.appendChild(textContainer);
+                    this.attachTactilePhysics(card);
                     grid.appendChild(card);
 
                     SketchItemRenderer.drawItemIllustration(canvas, cat, item.id, isDiscovered);
@@ -1283,6 +1312,7 @@ class Game {
                     <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981; font-weight: bold;">${completed ? '🏅 COMPLETED' : `+${ach.inkReward} 🖋️ &bull; +${ach.xpReward} XP`}</div>
                 `;
                 card.appendChild(textContainer);
+                this.attachTactilePhysics(card);
                 grid.appendChild(card);
 
                 SketchItemRenderer.drawItemIllustration(canvas, 'achievements', ach.id, completed);
@@ -1326,6 +1356,7 @@ class Game {
                         }
                     }
                 };
+                this.attachTactilePhysics(card);
                 grid.appendChild(card);
                 SketchItemRenderer.drawItemIllustration(canvas, 'skins', skin.id, unlocked);
             }
@@ -1369,6 +1400,7 @@ class Game {
                         }
                     }
                 };
+                this.attachTactilePhysics(card);
                 grid.appendChild(card);
                 SketchItemRenderer.drawItemIllustration(canvas, 'trails', trail.id, unlocked);
             }
