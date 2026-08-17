@@ -347,7 +347,7 @@ canvas {
     display: block;
 }
 
-/* Modals */
+/* Modals with 3D Perspective Depth */
 .modal-overlay {
     position: absolute;
     top: 0;
@@ -362,6 +362,7 @@ canvas {
     z-index: 100;
     padding: 16px;
     border-radius: 12px;
+    perspective: 1200px;
 }
 
 .modal-overlay.hidden {
@@ -377,6 +378,8 @@ canvas {
     width: 100%;
     box-shadow: 6px 8px 0px var(--border-sketch);
     text-align: center;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
 }
 
 .modal-card-wide {
@@ -531,6 +534,7 @@ canvas {
     align-items: center;
     text-align: center;
     cursor: pointer;
+    transform-style: preserve-3d;
     transition: transform 0.15s ease, background 0.15s ease;
 }
 

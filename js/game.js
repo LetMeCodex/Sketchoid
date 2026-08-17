@@ -632,7 +632,10 @@ class Game {
     showMenu() {
         this.state = 'MENU';
         this.hideAllModals();
-        document.getElementById('modalMenu')?.classList.remove('hidden');
+        const modal = document.getElementById('modalMenu');
+        if (modal) {
+            window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
+        }
         ModalArtRenderer.drawHeaderDiorama(document.getElementById('menu-art-canvas'), 'menu');
         this.loadLevel(0);
         this.updateHUD();
@@ -641,11 +644,17 @@ class Game {
     togglePause() {
         if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
-            document.getElementById('modalPause')?.classList.remove('hidden');
+            const modal = document.getElementById('modalPause');
+            if (modal) {
+                window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
+            }
             ModalArtRenderer.drawHeaderDiorama(document.getElementById('pause-art-canvas'), 'pause');
         } else if (this.state === 'PAUSED') {
             this.state = 'PLAYING';
-            document.getElementById('modalPause')?.classList.add('hidden');
+            const modal = document.getElementById('modalPause');
+            if (modal) {
+                window.motionEngine?.closeModal(modal, modal.querySelector('.modal-card'));
+            }
         }
     }
 
@@ -829,7 +838,10 @@ class Game {
 
             setTimeout(() => {
                 if (this.state === 'LEVEL_CLEAR') {
-                    document.getElementById('modalLevelClear')?.classList.remove('hidden');
+                    const modal = document.getElementById('modalLevelClear');
+                    if (modal) {
+                        window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
+                    }
                     ModalArtRenderer.drawHeaderDiorama(document.getElementById('clear-art-canvas'), 'clear');
                     const cScore = document.getElementById('clearScore');
                     const cCombo = document.getElementById('clearCombo');
@@ -837,7 +849,7 @@ class Game {
                     const cInk = document.getElementById('clearInkReward');
                     const cXp = document.getElementById('clearXpReward');
 
-                    if (cScore) cScore.innerText = this.score.toLocaleString();
+                    if (cScore) window.motionEngine?.animateNumberRoll(cScore, this.score);
                     if (cCombo) cCombo.innerText = `${this.maxComboStreak}x`;
                     if (cInk) cInk.innerText = `+${earnedInk} Ink`;
                     if (cXp) cXp.innerText = `+${earnedXp} XP`;
@@ -877,7 +889,10 @@ class Game {
             window.soundEngine?.playGameOver();
             window.telemetry?.track('game_over', { levelId: this.currentLevel.id, score: this.score });
 
-            document.getElementById('modalGameOver')?.classList.remove('hidden');
+            const modal = document.getElementById('modalGameOver');
+            if (modal) {
+                window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
+            }
             ModalArtRenderer.drawHeaderDiorama(document.getElementById('gameover-art-canvas'), 'gameover');
             const goScore = document.getElementById('gameOverFinalScore');
             const goStyle = document.getElementById('gameOverStyleScore');
@@ -885,8 +900,8 @@ class Game {
             const goInk = document.getElementById('gameOverInkEarned');
             const goXp = document.getElementById('gameOverXpEarned');
 
-            if (goScore) goScore.innerText = this.score.toLocaleString();
-            if (goStyle) goStyle.innerText = this.styleScore.toLocaleString();
+            if (goScore) window.motionEngine?.animateNumberRoll(goScore, this.score);
+            if (goStyle) window.motionEngine?.animateNumberRoll(goStyle, this.styleScore);
             if (goCombo) goCombo.innerText = `${this.maxComboStreak}x`;
             if (goInk) goInk.innerText = `+${this.sessionInkEarned} Ink`;
             if (goXp) goXp.innerText = `+${this.sessionXpEarned} XP`;
@@ -1235,7 +1250,7 @@ class Game {
         if (!modal) return;
 
         this.renderSketchbookTabs(activeTab);
-        modal.classList.remove('hidden');
+        window.motionEngine?.openModal(modal, modal.querySelector('.modal-card'));
     }
 
     renderSketchbookTabs(activeTab = 'chapters') {
@@ -1423,6 +1438,8 @@ class Game {
                 SketchItemRenderer.drawItemIllustration(canvas, 'trails', trail.id, unlocked);
             }
         }
+
+        window.motionEngine?.animateGridStagger(grid);
     }
 
     toggleDebugConsole() {
@@ -1432,15 +1449,15 @@ class Game {
             debugPanel.id = 'sketchoidDebugPanel';
             debugPanel.className = 'debug-panel';
             debugPanel.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 6px; color: #fbbf24;">🛠️ SKETCHOID DEV TOOLS</div>
-                <button id="dbgUnlockAll" class="btn-sketch btn-small" style="background: #10b981; color: #fff; font-weight: bold;">🔓 UNLOCK EVERYTHING (DEV)</button>
-                <button id="dbgSkipLevel" class="btn-sketch btn-small">⏩ Skip Level</button>
-                <button id="dbgAddInk" class="btn-sketch btn-small">+500 🖋️ Ink</button>
+                <div style="font-weight: bold; margin-bottom: 6px; color: #38bdf8;">SKETCHOID DEV TOOLS</div>
+                <button id="dbgUnlockAll" class="btn-sketch btn-small" style="background: #10b981; color: #fff; font-weight: bold;">UNLOCK EVERYTHING (DEV)</button>
+                <button id="dbgSkipLevel" class="btn-sketch btn-small">Skip Level</button>
+                <button id="dbgAddInk" class="btn-sketch btn-small">+500 Ink</button>
                 <button id="dbgAddXp" class="btn-sketch btn-small">+1000 XP</button>
-                <button id="dbgMultiball" class="btn-sketch btn-small">⚡ Multiball</button>
-                <button id="dbgLaser" class="btn-sketch btn-small">🔫 Lasers</button>
-                <button id="dbgKillBoss" class="btn-sketch btn-small">💀 Kill Boss</button>
-                <button id="dbgResetSave" class="btn-sketch btn-small" style="color: #f43f5e;">🔄 Reset Save</button>
+                <button id="dbgMultiball" class="btn-sketch btn-small">Multiball</button>
+                <button id="dbgLaser" class="btn-sketch btn-small">Lasers</button>
+                <button id="dbgKillBoss" class="btn-sketch btn-small">Kill Boss</button>
+                <button id="dbgResetSave" class="btn-sketch btn-small" style="color: #f43f5e;">Reset Save</button>
             `;
             document.body.appendChild(debugPanel);
 
