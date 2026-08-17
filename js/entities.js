@@ -81,7 +81,8 @@ class Paddle {
         if (inputState.right) this.targetX += keyMoveSpeed;
 
         this.targetX = Math.max(8, Math.min(this.canvasWidth - this.width - 8, this.targetX));
-        this.x += (this.targetX - this.x) * 0.44;
+        const followSpeed = inputState.isUsingTouch ? 0.88 : 0.48;
+        this.x += (this.targetX - this.x) * followSpeed;
         this.vx = this.x - this.prevX;
 
         const now = performance.now();

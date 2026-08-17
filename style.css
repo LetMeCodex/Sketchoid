@@ -1003,3 +1003,226 @@ h1 {
     color: #0369a1;
     transform: rotate(1deg);
 }
+
+/* ==========================================================================
+   MOBILE RESPONSIVE & BUTTERY SMOOTH 60FPS OPTIMIZATIONS
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 4px 6px;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
+        justify-content: flex-start;
+        touch-action: none;
+    }
+
+    header {
+        width: 100%;
+        margin-bottom: 4px;
+        padding: 2px 2px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo-container {
+        flex-shrink: 0;
+    }
+
+    .logo-canvas {
+        width: 125px !important;
+        height: 32px !important;
+    }
+
+    .top-actions {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    .top-actions .btn-sketch {
+        padding: 5px 7px;
+        font-size: 0.72rem;
+        height: 32px;
+        min-width: 32px;
+        justify-content: center;
+        box-shadow: 1px 2px 0px var(--border-sketch);
+    }
+
+    .top-actions .btn-sketch span {
+        display: none;
+    }
+
+    .top-actions .btn-icon {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+    }
+
+    .rough-theme-toggle-btn {
+        width: 64px;
+        height: 32px;
+        margin: 0 -4px;
+    }
+
+    .rough-switch-canvas {
+        width: 64px;
+        height: 32px;
+    }
+
+    /* Diegetic HUD on Mobile */
+    .hud-bar.diegetic-hud {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 3px;
+        padding: 0;
+        margin-bottom: 4px;
+    }
+
+    .hud-group {
+        gap: 3px;
+        display: flex;
+        align-items: center;
+    }
+
+    .hud-item {
+        padding: 3px 5px;
+        border-radius: 6px;
+        box-shadow: 1px 2px 0px var(--border-sketch);
+    }
+
+    .hud-label {
+        font-size: 0.55rem;
+        letter-spacing: 0px;
+    }
+
+    .hud-value, .hud-level-tag {
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+
+    #hudLevelName {
+        max-width: 72px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .combo-container.diegetic-combo {
+        padding: 2px 5px;
+        gap: 3px;
+    }
+
+    .combo-multiplier {
+        font-size: 0.85rem;
+        padding: 1px 3px;
+    }
+
+    /* Game Container & Canvas Responsive Full-Screen */
+    .game-container {
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .canvas-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        touch-action: none;
+    }
+
+    #gameCanvas {
+        width: 100% !important;
+        max-height: calc(100dvh - 128px) !important;
+        aspect-ratio: 800 / 640;
+        object-fit: contain;
+        border: 2px solid var(--border-sketch);
+        border-radius: 8px;
+        box-shadow: 2px 3px 0px var(--shadow-color);
+        touch-action: none;
+    }
+
+    .mobile-touch-bar {
+        width: 100%;
+        margin-top: 4px;
+        padding: 5px;
+        font-size: 0.70rem;
+        letter-spacing: 0.3px;
+        touch-action: none;
+    }
+
+    .helper-legend {
+        display: none !important;
+    }
+
+    /* Mobile Modals */
+    .modal-overlay {
+        padding: 8px;
+    }
+
+    .modal-card {
+        padding: 14px 10px;
+        max-height: 88dvh;
+        overflow-y: auto;
+    }
+
+    .modal-card h2 {
+        font-size: 1.25rem;
+        margin-bottom: 4px;
+    }
+
+    .tab-bar {
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .tab-btn {
+        font-size: 0.72rem;
+        padding: 4px 7px;
+    }
+
+    .item-grid {
+        max-height: 48dvh !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 4px;
+    }
+
+    .collection-card {
+        padding: 6px;
+    }
+
+    .item-sketch-canvas {
+        width: 90px;
+        height: 50px;
+    }
+
+    .collection-title {
+        font-size: 0.75rem;
+    }
+
+    .collection-desc {
+        font-size: 0.65rem;
+    }
+
+    .modal-actions {
+        margin-top: 10px;
+        gap: 6px;
+    }
+
+    .btn-large {
+        font-size: 0.88rem;
+        padding: 7px 12px;
+    }
+}

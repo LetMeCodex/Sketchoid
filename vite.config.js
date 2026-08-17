@@ -17,6 +17,11 @@ function copyDir(src, dest) {
 }
 
 export default defineConfig({
+  server: {
+    watch: {
+      ignored: ['**/android/**', '**/dist/**', '**/*.apk']
+    }
+  },
   plugins: [
     {
       name: 'copy-js-assets',
