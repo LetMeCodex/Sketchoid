@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKETCHOID &bull; Hand-Drawn Neo-Arkanoid</title>
+    <meta name="description" content="SKETCHOID: An interactive hand-drawn neo-Arkanoid brick breaker arcade game built with Rough.js, Anime.js, and procedural pentatonic chime sound synthesis.">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Local Rough.js & Anime.js (Fast & 100% Reliable Offline) -->
+    <script src="js/lib/rough.js"></script>
+    <script src="js/lib/anime.js"></script>
+</head>
+<body class="theme-blueprint">
+
+    <!-- Top Navigation Header -->
+    <header>
+        <div class="logo-container">
+            <h1>✏️ SKETCHOID</h1>
+            <span class="logo-badge">Rough.js Edition</span>
+        </div>
+        <div class="top-actions">
+            <button id="btnTheme" class="btn-sketch" title="Switch Theme (Key: T)">🎨 Dark Blueprint</button>
+            <button id="btnMute" class="btn-sketch" title="Toggle Sound (Key: M)">🔊 Sound</button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="game-container">
+        <!-- Top HUD Dashboard -->
+        <div class="hud-bar">
+            <div class="hud-group">
+                <div class="hud-item">
+                    <span class="hud-label">Stage</span>
+                    <span id="hudLevelName" class="hud-level-tag">The Prismatic Gate</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Score</span>
+                    <span id="hudScore" class="hud-value">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">High Score</span>
+                    <span id="hudHighScore" class="hud-value" style="color: #fbbf24;">0</span>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <!-- Pentatonic Combo Multiplier Streak -->
+                <div id="hudComboContainer" class="combo-container">
+                    <div class="hud-item" style="text-align: right;">
+                        <span class="hud-label">Pentatonic Streak</span>
+                        <span id="hudCombo" class="hud-value" style="font-size: 0.95rem;">0 HITS</span>
+                    </div>
+                    <span id="hudMultiplier" class="combo-multiplier">1x</span>
+                </div>
+
+                <div class="hud-item" style="text-align: right;">
+                    <span class="hud-label">Lives</span>
+                    <span id="hudLives" class="hud-value" style="font-size: 1.1rem; letter-spacing: 2px;">❤️ ❤️ ❤️</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hand-drawn 60fps Canvas -->
+        <canvas id="gameCanvas" width="800" height="640"></canvas>
+
+        <!-- Start Menu Modal -->
+        <div id="modalMenu" class="modal-overlay">
+            <div class="modal-card">
+                <h2>✏️ SKETCHOID</h2>
+                <p>Aim the elastic boiling paddle using <strong>Mouse</strong> or <strong>A / D / Arrow Keys</strong>. Press <strong>Space</strong> or <strong>Click</strong> to launch ball and blast dual laser turrets!</p>
+
+                <div class="feature-preview-grid">
+                    <div class="feature-pill">💎 <strong>Tiers:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
+                    <div class="feature-pill">⚡ <strong>Powerups:</strong> 3x Multiball, Lasers, Wide Paddle</div>
+                    <div class="feature-pill">🎵 <strong>Audio:</strong> Pentatonic FM Chime Cascades</div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="btnStart" class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">🚀 Play Campaign</button>
+                    <button id="btnEndless" class="btn-sketch btn-large btn-secondary" onclick="if(window.game) window.game.startEndless();">♾️ Infinite Mode</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Modal -->
+        <div id="modalPause" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>⏸️ Game Paused</h2>
+                <p>Take a breath! Your combo streak and active powerups are safely preserved.</p>
+                <div class="modal-actions">
+                    <button id="btnResume" class="btn-sketch btn-large" onclick="if(window.game) window.game.togglePause();">▶️ Resume Game</button>
+                    <button id="btnRestart" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.restartCurrentGame();">🔄 Restart Level</button>
+                    <button id="btnMenu" class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">🏠 Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage Clear Modal -->
+        <div id="modalLevelClear" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>✨ Stage Cleared!</h2>
+                <p>Exemplary crystal demolition and rebound precision!</p>
+
+                <div class="modal-stats">
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Current Score</span>
+                        <span id="clearScore" class="hud-value" style="color: #10b981;">0</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Max Combo Streak</span>
+                        <span id="clearCombo" class="hud-value" style="color: #fbbf24;">0x</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="btnNextLevel" class="btn-sketch btn-large" onclick="if(window.game) window.game.nextLevel();">🚀 Next Stage</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="modalGameOver" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>💀 Game Over</h2>
+                <p>All kinetic spheres lost to the void! Ready for another run?</p>
+
+                <div class="modal-stats">
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Final Score</span>
+                        <span id="gameOverFinalScore" class="hud-value" style="color: #ef4444;">0</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startGame(0);">🔄 Try Again</button>
+                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.showMenu();">🏠 Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Victory Modal -->
+        <div id="modalVictory" class="modal-overlay hidden">
+            <div class="modal-card">
+                <h2>🏆 Sketchoid Champion!</h2>
+                <p>You have conquered all 5 sectors of the Hand-Drawn Sketchoid Nexus!</p>
+
+                <div class="modal-stats">
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Master Score</span>
+                        <span id="victoryFinalScore" class="hud-value" style="color: #fbbf24;">0</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-sketch btn-large" onclick="if(window.game) window.game.startEndless();">♾️ Enter Endless Rift</button>
+                    <button class="btn-sketch btn-secondary" onclick="if(window.game) window.game.startGame(0);">🔄 Play Campaign Again</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Helper Legend Footer -->
+        <div class="helper-legend">
+            <div class="legend-items">
+                <span class="legend-chip">🔴 Ruby (Explosive)</span>
+                <span class="legend-chip">🟣 Amethyst (Armored)</span>
+                <span class="legend-chip">🔵 Sapphire</span>
+                <span class="legend-chip">🟠 Amber</span>
+                <span class="legend-chip">🟢 Emerald</span>
+                <span class="legend-chip">🟡 Gold (Drop)</span>
+            </div>
+            <div>
+                <span>[Mouse / A-D]: Move &bull; [Space / Click]: Launch & Laser &bull; [P]: Pause &bull; [T]: Theme</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Game Logic Scripts in Order -->
+    <script src="js/audio.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/levels.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
