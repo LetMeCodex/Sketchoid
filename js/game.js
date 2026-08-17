@@ -452,7 +452,19 @@ class Game {
         document.getElementById('btnRestart')?.addEventListener('click', () => this.restartCurrentGame());
         document.getElementById('btnNextLevel')?.addEventListener('click', () => this.nextLevel());
         document.getElementById('btnMenu')?.addEventListener('click', () => this.showMenu());
-        document.getElementById('btnTheme')?.addEventListener('click', () => this.cycleTheme());
+        // Initialize Handcrafted 3D UI Buttons
+        const btnCol = document.getElementById('btnCollection');
+        if (btnCol) new RoughButton(btnCol, { type: 'sketchbook', label: 'My Sketchbook' });
+
+        const btnDev = document.getElementById('btnDevTools');
+        if (btnDev) new RoughButton(btnDev, { type: 'devtools', label: 'Dev Tools' });
+
+        const btnSet = document.getElementById('btnSettings');
+        if (btnSet) new RoughButton(btnSet, { type: 'settings', label: 'Settings' });
+
+        const btnMute = document.getElementById('btnMute');
+        if (btnMute) new SoundToggle(btnMute, window.soundEngine);
+
         // Attach Handcrafted 3D Elastic Physics to all sketch buttons
         document.querySelectorAll('.btn-sketch').forEach(btn => this.attachTactilePhysics(btn));
 

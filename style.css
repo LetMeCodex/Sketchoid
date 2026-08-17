@@ -212,11 +212,18 @@ h1 {
 .hud-item {
     display: flex;
     flex-direction: column;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 5px 12px;
+    border-radius: 8px;
     background: var(--sticky-bg);
     border: 2px solid var(--sticky-border);
-    box-shadow: 2px 2px 0px var(--border-sketch);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18), 2px 3px 0px var(--border-sketch);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hud-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22), 3px 4px 0px var(--border-sketch);
 }
 
 /* Taped Paper Tab Effect */
@@ -228,18 +235,31 @@ h1 {
 .taped-tab::before {
     content: '';
     position: absolute;
-    top: -6px;
+    top: -7px;
     left: 20%;
-    width: 30px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.35);
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    transform: rotate(-2deg);
+    width: 32px;
+    height: 10px;
+    background: rgba(254, 240, 138, 0.45);
+    border: 1px dashed rgba(180, 83, 9, 0.4);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transform: rotate(-3deg);
 }
 
 /* Sticky Note Style */
 .sticky-note {
     transform: rotate(0.8deg);
+}
+
+.sticky-note::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    right: 15%;
+    width: 28px;
+    height: 9px;
+    background: rgba(254, 240, 138, 0.45);
+    border: 1px dashed rgba(180, 83, 9, 0.4);
+    transform: rotate(2deg);
 }
 
 .high-score-note {
@@ -248,7 +268,7 @@ h1 {
 
 .hud-label {
     font-family: var(--font-sketch);
-    font-size: 0.70rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -256,13 +276,13 @@ h1 {
 
 .hud-value {
     font-family: var(--font-mono);
-    font-size: 1.05rem;
+    font-size: 1.10rem;
     font-weight: 700;
 }
 
 .hud-level-tag {
     font-family: var(--font-sketch);
-    font-size: 0.88rem;
+    font-size: 0.90rem;
     font-weight: 700;
     color: var(--text-primary);
 }
@@ -271,16 +291,17 @@ h1 {
 .combo-container.diegetic-combo {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: var(--sticky-bg);
     border: 2px dashed var(--border-sketch);
-    padding: 3px 8px;
-    border-radius: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
 .combo-multiplier {
     font-family: var(--font-heading);
-    font-size: 1.15rem;
+    font-size: 1.20rem;
     font-weight: 700;
     color: #fbbf24;
     padding: 2px 6px;
@@ -545,6 +566,50 @@ canvas {
   height: 42px;
   display: block;
   pointer-events: none;
+}
+
+/* ==========================================================================
+   HAND-DRAWN 3D ROUGH.JS UI BUTTONS
+   ========================================================================== */
+.rough-ui-btn {
+  position: relative;
+  height: 42px;
+  min-width: 125px;
+  background: transparent;
+  border: none;
+  padding: 0 10px;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+  transition: transform 0.15s ease;
+}
+
+.rough-ui-btn-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rough-ui-btn-label {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-heading);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding-left: 24px;
+  pointer-events: none;
+  letter-spacing: 0.2px;
 }
 
 .item-sketch-canvas {
