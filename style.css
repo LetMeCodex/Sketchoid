@@ -559,3 +559,33 @@ canvas {
     font-family: var(--font-sketch);
     font-size: 0.76rem;
 }
+
+/* Floating Developer Debug Panel */
+.debug-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 2px dashed #f59e0b;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    color: #f8fafc;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+}
+
+.btn-small {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+}
+
+.ink-note {
+    background: #e0f2fe;
+    color: #0369a1;
+    transform: rotate(1deg);
+}

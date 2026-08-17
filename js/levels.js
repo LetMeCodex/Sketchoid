@@ -1,7 +1,6 @@
 /**
- * SKETCHOID Level Blueprints & 3 Boss Encounters (Phase 2 & Phase 3 Evolution)
- * Sector 1: Clean Draft, Sector 2: Portal Matrix,
- * Sector 3: 🧼 The Eraser Boss, Sector 4: 🖋️ The Living Ink Boss, Sector 5: ✏️ The Arch-Pencil Boss!
+ * SKETCHOID Campaign Chapters & 3-Star Level Masteries
+ * Data-driven Chapter progression, 3-Star Mastery objectives, and Boss Encounters.
  */
 
 const BRICK_TYPES = {
@@ -14,12 +13,26 @@ const BRICK_TYPES = {
     OBSIDIAN: { code: 'X', id: 'obsidian', name: 'Obsidian Barrier', hp: Infinity, color: '#475569', strokeColor: '#1e293b', fillStyle: 'cross-hatch', score: 0, unbreakable: true }
 };
 
+const CHAPTERS = [
+    { id: 1, title: 'Chapter I: The Clean Draft', desc: 'Foundations of geometric bank shots and crystal dynamics.' },
+    { id: 2, title: 'Chapter II: The Portal Matrix', desc: 'Wormhole portals and rotating kinetic windmills.' },
+    { id: 3, title: 'Chapter III: The Void Rub-Out', desc: 'Encounter The Eraser boss clearing the canvas.' },
+    { id: 4, title: 'Chapter IV: Corrosive Bleed', desc: 'Overcome The Living Ink reservoir flooding the arena.' },
+    { id: 5, title: 'Chapter V: Masterpiece Convergence', desc: 'Final confrontation with The Arch-Pencil.' }
+];
+
 const LEVELS = [
     {
-        id: 1,
+        id: '1_1',
+        chapterId: 1,
         stageNumber: 1,
         name: "Sector 1: The Clean Draft",
         subtitle: "A pristine graph-paper gateway of crystals and gold",
+        starConditions: {
+            targetScore: 3500,
+            masteryScore: 5000,
+            masteryDesc: "Complete without losing any lives"
+        },
         geometry: {
             windmills: [],
             portals: [],
@@ -37,10 +50,16 @@ const LEVELS = [
         ]
     },
     {
-        id: 2,
+        id: '2_1',
+        chapterId: 2,
         stageNumber: 2,
         name: "Sector 2: The Portal Matrix",
         subtitle: "Twin Ink Portals & revolving windmill kinetic deflection",
+        starConditions: {
+            targetScore: 4000,
+            masteryScore: 6000,
+            masteryDesc: "Achieve a 6x Combo Streak"
+        },
         geometry: {
             windmills: [
                 { x: 400, y: 260, length: 85, speed: 1.4, color: '#38bdf8' }
@@ -62,10 +81,16 @@ const LEVELS = [
         ]
     },
     {
-        id: 3,
+        id: '3_1',
+        chapterId: 3,
         stageNumber: 3,
         name: "Sector 3: 🧼 The Eraser",
         subtitle: "BOSS ENCOUNTER: The Void Rub-Out erasing bricks mid-flight!",
+        starConditions: {
+            targetScore: 4500,
+            masteryScore: 7000,
+            masteryDesc: "Vanquish The Eraser"
+        },
         geometry: {
             windmills: [],
             portals: [],
@@ -86,10 +111,16 @@ const LEVELS = [
         ]
     },
     {
-        id: 4,
+        id: '4_1',
+        chapterId: 4,
         stageNumber: 4,
         name: "Sector 4: 🖋️ The Living Ink",
         subtitle: "BOSS ENCOUNTER: Corrosive Ink Bleeds constricting your arena!",
+        starConditions: {
+            targetScore: 5000,
+            masteryScore: 7500,
+            masteryDesc: "Vanquish The Living Ink"
+        },
         geometry: {
             windmills: [],
             portals: [],
@@ -110,10 +141,16 @@ const LEVELS = [
         ]
     },
     {
-        id: 5,
+        id: '5_1',
+        chapterId: 5,
         stageNumber: 5,
         name: "Sector 5: ✏️ The Arch-Pencil",
         subtitle: "BOSS ENCOUNTER: The Sentient Drafter live-sketching physical obstacles!",
+        starConditions: {
+            targetScore: 6000,
+            masteryScore: 9000,
+            masteryDesc: "Vanquish The Arch-Pencil"
+        },
         geometry: {
             windmills: [
                 { x: 180, y: 320, length: 70, speed: -1.2, color: '#f59e0b' },
@@ -172,11 +209,17 @@ function generateProceduralLevel(levelNum) {
 
     return {
         id: `infinite_${levelNum}`,
+        chapterId: Math.floor((levelNum - 1) / 5) + 1,
         stageNumber: ((levelNum - 1) % 5) + 1,
         name: isBossLevel ? `Rift ${levelNum}: Boss Convergence` : `Rift ${levelNum}: Procedural Fracture`,
         subtitle: isBossLevel ? `A chaotic entity has breached the sketchbook boundary!` : `Dynamic geometry at entropy tier ${difficultyFactor.toFixed(2)}`,
         hasBoss: isBossLevel,
         bossType: isBossLevel ? bossTypes[levelNum % bossTypes.length] : null,
+        starConditions: {
+            targetScore: 4000 + levelNum * 500,
+            masteryScore: 6500 + levelNum * 800,
+            masteryDesc: `Achieve ${Math.min(15, 5 + levelNum)}x combo`
+        },
         geometry: {
             windmills: levelNum % 2 === 0 ? [{ x: 400, y: 260, length: 80, speed: 1.5, color: '#38bdf8' }] : [],
             portals: levelNum % 3 === 0 ? [{ entryX: 120, entryY: 280, exitX: 680, exitY: 280, colorA: '#38bdf8', colorB: '#f97316' }] : [],
@@ -187,5 +230,6 @@ function generateProceduralLevel(levelNum) {
 }
 
 window.BRICK_TYPES = BRICK_TYPES;
+window.CHAPTERS = CHAPTERS;
 window.LEVELS = LEVELS;
 window.generateProceduralLevel = generateProceduralLevel;

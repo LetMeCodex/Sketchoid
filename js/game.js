@@ -1,7 +1,7 @@
 /**
- * SKETCHOID Main Game Engine & Controller (60 FPS Performance & Visual Stability Upgrade)
- * Living Sketchbook Renderer, Dynamic Stage Evolution, Page Turn Mutation,
- * Interactive Geometry, Boss Battles (Arch-Pencil), Challenges, and Collection Unlocks
+ * SKETCHOID Main Game Controller & Architecture (Commercial Indie Polish Pass)
+ * Integrates Living Sketchbook Canvas, Centralized Impact & Skill Event Buses,
+ * 3-Star Level Mastery, 3 Rule-Altering Bosses, Mobile Input Abstraction, and Developer Debug Tools.
  */
 
 const THEMES = {
@@ -60,11 +60,9 @@ class Game {
             } else if (typeof window.rough !== 'undefined' && window.rough.canvas) {
                 this.rc = window.rough.canvas(this.canvas);
             } else {
-                console.warn('Rough.js not found, using fallback renderer');
                 this.rc = this.createFallbackRenderer();
             }
         } catch (e) {
-            console.error('Error initializing Rough.js:', e);
             this.rc = this.createFallbackRenderer();
         }
 
@@ -76,26 +74,28 @@ class Game {
         this.currentThemeKey = 'blueprint';
         this.theme = THEMES[this.currentThemeKey];
 
-        // Decoupled Phase 3 Engines
+        // Decoupled Core Systems
         this.camera = new Camera2D(this.width, this.height);
         this.physicsWorld = new PhysicsWorld(this.width, this.height);
         this.sketchbook = new SketchbookWorld(this.width, this.height);
         this.geometryManager = new InteractiveGeometryManager();
+        this.inputManager = new InputManager(this.canvas, this.width, this.height);
         this.boss = null;
 
-        this.setupPhysicsEventBus();
-
-        // Game State
+        // Game State & Scoring
         this.state = 'MENU';
         this.score = 0;
-        this.highScore = parseInt(localStorage.getItem('sketchoid_highscore') || localStorage.getItem('neo_arkanoid_highscore') || '0', 10);
+        this.styleScore = 0;
         this.lives = 3;
         this.maxLives = 5;
         this.levelIndex = 0;
         this.currentLevel = null;
         this.isEndless = false;
+        this.sessionInkEarned = 0;
+        this.sessionXpEarned = 0;
+        this.livesLostThisLevel = 0;
 
-        // Combo 2.0 & Style Scoring Engine
+        // Combo 2.0 & Style Engine
         this.comboStreak = 0;
         this.maxComboStreak = 0;
         this.comboMultiplier = 1;
@@ -111,27 +111,20 @@ class Game {
         this.powerups = [];
         this.safetyNet = new SafetyNet(this.width, this.height);
 
-        // Input
-        this.inputState = {
-            left: false,
-            right: false,
-            space: false,
-            mouseX: this.width / 2,
-            isUsingMouse: true
-        };
-
-        // Time Dilation & Chrono SlowMo
+        // Time Dilation
         this.slowmoTimer = 0;
         this.timeScale = 1.0;
 
-        // Frame timing & fixed sub-stepping accumulator
+        // Debug Flags
+        this.godMode = false;
+        this.showDebugColliders = false;
+
         this.lastTime = performance.now();
         this.fixedTimeStep = 1 / 120;
 
-        // Initial preview load
-        this.loadLevel(0);
-
         this.setupEventListeners();
+        this.setupCentralizedEventBuses();
+        this.loadLevel(0);
         this.updateHUD();
     }
 
@@ -214,10 +207,26 @@ class Game {
         };
     }
 
-    setupPhysicsEventBus() {
+    setupCentralizedEventBuses() {
+        // 1. Centralized Impact Event Bus Dispatcher
+        window.impactEvents.subscribe((evt) => {
+            if (evt.type === 'WALL_HIT') {
+                window.skillEvents.recordWallBounce(performance.now() / 1000);
+                window.soundEngine?.playWallTick();
+                window.haptics?.light();
+            } else if (evt.type === 'PADDLE_HIT') {
+                window.skillEvents.recordPaddleHit();
+                window.haptics?.light();
+            } else if (evt.type === 'BRICK_HIT') {
+                window.haptics?.medium();
+            } else if (evt.type === 'EXPLOSION') {
+                window.haptics?.heavy();
+            }
+        });
+
+        // 2. Physics Event Bus Wiring
         this.physicsWorld.onEvent = (type, payload) => {
             if (this.state !== 'PLAYING') return;
-
             const timeNow = performance.now() / 1000;
 
             if (type === 'brickHit') {
@@ -225,12 +234,28 @@ class Game {
                 const dtSinceLastHit = timeNow - this.lastHitTime;
                 this.lastHitTime = timeNow;
 
+                // Discover in Sketch Archive
+                window.progression?.discoverItem('crystals', brick.config.id);
+
                 this.comboStreak++;
                 if (this.comboStreak > this.maxComboStreak) {
                     this.maxComboStreak = this.comboStreak;
                     window.progression?.recordStat('highestCombo', this.maxComboStreak);
                 }
                 this.comboMultiplier = 1 + Math.floor(this.comboStreak / 3);
+
+                // Check Bank Shot Skill Event
+                const bankShot = window.skillEvents.checkBankShot(timeNow);
+                if (bankShot) {
+                    this.styleScore += bankShot.scoreBonus;
+                    this.addScore(bankShot.scoreBonus);
+                    window.progression?.addXp(bankShot.xpBonus);
+                    window.progression?.addInk(bankShot.inkBonus);
+                    window.progression?.recordStat('bankShots', 1);
+                    this.sessionInkEarned += bankShot.inkBonus;
+                    this.sessionXpEarned += bankShot.xpBonus;
+                    window.particleSystem?.addFloatingText(bankShot.name, hitResult.contactX, hitResult.contactY - 24, bankShot.color, 1.3, true);
+                }
 
                 let styleMultiplier = 1.0;
                 let styleCallout = null;
@@ -269,6 +294,10 @@ class Game {
 
                 if (destroyed) {
                     window.progression?.recordStat('bricksBroken', 1);
+                    window.progression?.addInk(1);
+                    window.progression?.addXp(5);
+                    this.sessionInkEarned += 1;
+                    this.sessionXpEarned += 5;
 
                     const earnedPts = Math.round(brick.score * this.comboMultiplier * speedBonus * styleMultiplier);
                     this.addScore(earnedPts);
@@ -308,12 +337,13 @@ class Game {
                 }
                 this.updateHUD();
             } else if (type === 'bossHit') {
-                const { boss, ball, hitResult, defeated } = payload;
+                const { boss, hitResult, defeated } = payload;
                 this.physicsWorld.hitStop.trigger(30);
                 this.camera.addTrauma(0.20);
                 this.camera.impactZoom(1.025);
                 window.soundEngine?.playExplosion(false);
                 window.soundEngine?.playBrickChime(15, 'amethyst');
+                window.progression?.discoverItem('bosses', boss.type);
 
                 const hitX = hitResult ? hitResult.contactX : boss.x;
                 const hitY = hitResult ? hitResult.contactY : boss.y;
@@ -325,11 +355,16 @@ class Game {
 
                 if (defeated) {
                     window.progression?.recordStat('bossDefeated', 1);
+                    window.progression?.addInk(150);
+                    window.progression?.addXp(300);
+                    this.sessionInkEarned += 150;
+                    this.sessionXpEarned += 300;
+
                     this.camera.flash('#fbbf24', 0.35);
                     this.camera.impactZoom(1.05);
                     window.soundEngine?.playLevelClear();
                     this.addScore(5000);
-                    window.particleSystem?.addFloatingText('🏆 ARCH-PENCIL VANQUISHED! +5000', this.width / 2, this.height / 2 - 30, '#fbbf24', 1.8, true);
+                    window.particleSystem?.addFloatingText(`🏆 ${boss.name} VANQUISHED! +5000`, this.width / 2, this.height / 2 - 30, '#fbbf24', 1.8, true);
                     this.checkLevelClear();
                 }
                 this.updateHUD();
@@ -343,7 +378,10 @@ class Game {
                     this.physicsWorld.hitStop.trigger(25);
                     this.camera.impactZoom(1.02);
                     window.soundEngine?.playPerfectReboundTriad();
+                    this.styleScore += 150;
                     this.addScore(150);
+                    window.progression?.recordStat('perfectRebounds', 1);
+                    window.progression?.addXp(15);
                     window.particleSystem?.addFloatingText('PERFECT REBOUND! +150', ball.x, this.paddle.y - 25, '#38bdf8', 1.3, true);
                 }
 
@@ -353,6 +391,8 @@ class Game {
             } else if (type === 'nearMiss') {
                 const { x, y } = payload;
                 window.progression?.recordStat('nearMisses', 1);
+                window.progression?.addXp(10);
+                this.styleScore += 50;
                 this.addScore(50);
                 this.camera.addTrauma(0.04);
                 window.soundEngine?.playWallTick();
@@ -370,7 +410,7 @@ class Game {
                     window.particleSystem?.createBrickExplosion(brick.x, brick.y, brick.width, brick.height, brick.config.color, brick.config.id);
                     window.particleSystem?.addFloatingText(`+${earnedPts}`, brick.x + brick.width / 2, brick.y + brick.height / 2, brick.config.color, 1.0);
                     if (brick.isExplosive) this.triggerRubyNuke(brick);
-                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups) {
+                    if (brick.dropsPowerup && !window.challengeManager?.activeChallenge?.disablePowerups && this.powerups.length < 3) {
                         this.powerups.push(new PowerupCapsule(brick.x + brick.width / 2, brick.y + brick.height / 2));
                     }
                     this.checkLevelClear();
@@ -402,59 +442,9 @@ class Game {
     }
 
     setupEventListeners() {
-        this.canvas.addEventListener('mousemove', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.width / rect.width;
-            this.inputState.mouseX = (e.clientX - rect.left) * scaleX;
-            this.inputState.isUsingMouse = true;
-            this.paddle.targetX = this.inputState.mouseX - this.paddle.width / 2;
-        });
+        this.inputManager.onActionTrigger = () => this.handleActionTrigger();
 
-        this.canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 0) this.handleActionTrigger();
-        });
-
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (e.touches.length > 0) {
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.width / rect.width;
-                this.inputState.mouseX = (e.touches[0].clientX - rect.left) * scaleX;
-                this.inputState.isUsingMouse = true;
-                this.paddle.targetX = this.inputState.mouseX - this.paddle.width / 2;
-            }
-        }, { passive: false });
-
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleActionTrigger();
-        }, { passive: false });
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
-                this.inputState.left = true;
-                this.inputState.isUsingMouse = false;
-            }
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
-                this.inputState.right = true;
-                this.inputState.isUsingMouse = false;
-            }
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-                e.preventDefault();
-                this.inputState.space = true;
-                this.handleActionTrigger();
-            }
-            if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
-            if (e.code === 'KeyM') this.toggleMute();
-            if (e.code === 'KeyT') this.cycleTheme();
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.inputState.left = false;
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') this.inputState.right = false;
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') this.inputState.space = false;
-        });
-
+        // Main Navigation Buttons
         document.getElementById('btnStart')?.addEventListener('click', () => this.startGame(0));
         document.getElementById('btnEndless')?.addEventListener('click', () => this.startEndless());
         document.getElementById('btnResume')?.addEventListener('click', () => this.togglePause());
@@ -463,6 +453,12 @@ class Game {
         document.getElementById('btnMenu')?.addEventListener('click', () => this.showMenu());
         document.getElementById('btnTheme')?.addEventListener('click', () => this.cycleTheme());
         document.getElementById('btnMute')?.addEventListener('click', () => this.toggleMute());
+
+        // Notebook Collection Modal
+        document.getElementById('btnCollection')?.addEventListener('click', () => this.openSketchbookModal('chapters'));
+        document.getElementById('btnCloseCollection')?.addEventListener('click', () => {
+            document.getElementById('modalCollection')?.classList.add('hidden');
+        });
 
         // Settings Modal & Accessibility
         document.getElementById('btnSettings')?.addEventListener('click', () => {
@@ -499,27 +495,17 @@ class Game {
             }
         });
 
-        // Mobile Touch Bar
-        const touchBar = document.getElementById('mobileTouchBar');
-        if (touchBar) {
-            const handleBarTouch = (e) => {
-                e.preventDefault();
-                if (e.touches.length > 0) {
-                    const rect = touchBar.getBoundingClientRect();
-                    const touchRatio = (e.touches[0].clientX - rect.left) / rect.width;
-                    this.inputState.mouseX = Math.max(0, Math.min(this.width, touchRatio * this.width));
-                    this.inputState.isUsingMouse = true;
-                    this.paddle.targetX = this.inputState.mouseX - this.paddle.width / 2;
-                }
-            };
-            touchBar.addEventListener('touchmove', handleBarTouch, { passive: false });
-            touchBar.addEventListener('touchstart', (e) => {
-                handleBarTouch(e);
-                this.handleActionTrigger();
-            }, { passive: false });
-        }
+        // Developer Debug Console (Press Backtick `)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Backquote') {
+                this.toggleDebugConsole();
+            }
+            if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
+            if (e.code === 'KeyM') this.toggleMute();
+            if (e.code === 'KeyT') this.cycleTheme();
+        });
 
-        // Pause on window blur / tab defocus
+        // Pause on window blur
         window.addEventListener('blur', () => {
             if (this.state === 'PLAYING') {
                 this.togglePause();
@@ -574,7 +560,11 @@ class Game {
         window.challengeManager.activeChallenge = null;
         this.state = 'PLAYING';
         this.score = 0;
+        this.styleScore = 0;
         this.lives = 3;
+        this.livesLostThisLevel = 0;
+        this.sessionInkEarned = 0;
+        this.sessionXpEarned = 0;
         this.levelIndex = levelIdx;
         this.isEndless = false;
         this.comboStreak = 0;
@@ -586,13 +576,18 @@ class Game {
         this.loadLevel(this.levelIndex);
         this.hideAllModals();
         this.updateHUD();
+        window.telemetry?.track('level_start', { levelId: this.currentLevel.id, isEndless: false });
     }
 
     startEndless() {
         window.challengeManager.activeChallenge = null;
         this.state = 'PLAYING';
         this.score = 0;
+        this.styleScore = 0;
         this.lives = 3;
+        this.livesLostThisLevel = 0;
+        this.sessionInkEarned = 0;
+        this.sessionXpEarned = 0;
         this.levelIndex = 1;
         this.isEndless = true;
         this.comboStreak = 0;
@@ -604,6 +599,7 @@ class Game {
         this.loadLevel(this.levelIndex);
         this.hideAllModals();
         this.updateHUD();
+        window.telemetry?.track('level_start', { levelId: 'infinite', isEndless: true });
     }
 
     restartCurrentGame() {
@@ -661,6 +657,7 @@ class Game {
         this.safetyNet.isActive = false;
         this.geometryManager.clear();
         this.boss = null;
+        this.livesLostThisLevel = 0;
 
         this.paddle.reset(this.width, this.height);
         this.balls = [new Ball(this.paddle.x + this.paddle.width / 2, this.paddle.y - 12)];
@@ -746,7 +743,6 @@ class Game {
     nextLevel() {
         this.hideAllModals();
         window.challengeManager.onStageCleared(this);
-        window.progression?.recordStat('stagesCleared', 1);
 
         if (this.isEndless) {
             this.levelIndex++;
@@ -783,26 +779,65 @@ class Game {
         if (remainingDestructible.length === 0 && bossDefeated && this.state === 'PLAYING') {
             this.state = 'LEVEL_CLEAR';
             window.soundEngine?.playLevelClear();
+            window.haptics?.success();
             this.camera.impactZoom(1.04);
             this.camera.flash('#10b981', 0.25);
 
             const clearBonus = 1000 * (this.levelIndex + 1);
             this.addScore(clearBonus);
-            window.particleSystem?.addFloatingText(`STAGE CLEAR! +${clearBonus}`, this.width / 2, this.height / 2 - 20, '#fbbf24', 1.6, true);
+
+            const isFlawless = this.livesLostThisLevel === 0;
+            const completionResult = window.progression?.recordLevelCompletion(
+                this.currentLevel.id,
+                this.score,
+                this.styleScore,
+                this.maxComboStreak,
+                isFlawless
+            );
+
+            // Award Stage Clear XP & Ink
+            const earnedXp = 100 + (completionResult?.stars === 3 ? 75 : 0);
+            const earnedInk = 20 + (completionResult?.stars === 3 ? 50 : 0);
+            window.progression?.addXp(earnedXp);
+            window.progression?.addInk(earnedInk);
+            this.sessionXpEarned += earnedXp;
+            this.sessionInkEarned += earnedInk;
+
+            window.telemetry?.track('level_complete', {
+                levelId: this.currentLevel.id,
+                score: this.score,
+                stars: completionResult?.stars || 1
+            });
 
             setTimeout(() => {
                 if (this.state === 'LEVEL_CLEAR') {
                     document.getElementById('modalLevelClear')?.classList.remove('hidden');
                     const cScore = document.getElementById('clearScore');
                     const cCombo = document.getElementById('clearCombo');
-                    if (cScore) cScore.innerText = this.score;
+                    const cStars = document.getElementById('clearStarsDisplay');
+                    const cInk = document.getElementById('clearInkReward');
+                    const cXp = document.getElementById('clearXpReward');
+
+                    if (cScore) cScore.innerText = this.score.toLocaleString();
                     if (cCombo) cCombo.innerText = `${this.maxComboStreak}x`;
+                    if (cInk) cInk.innerText = `+${earnedInk} 🖋️`;
+                    if (cXp) cXp.innerText = `+${earnedXp} XP`;
+
+                    if (cStars) {
+                        const count = completionResult?.stars || 1;
+                        let starText = '';
+                        for (let s = 0; s < 3; s++) {
+                            starText += s < count ? '★ ' : '☆ ';
+                        }
+                        cStars.innerText = starText.trim();
+                    }
                 }
             }, 500);
         }
     }
 
     handleBallLost() {
+        this.livesLostThisLevel++;
         if (window.challengeManager?.activeChallenge?.flawless) {
             this.lives = 0;
         } else {
@@ -810,6 +845,7 @@ class Game {
         }
 
         window.soundEngine?.playBallLost();
+        window.haptics?.failure();
         this.camera.addTrauma(0.25);
         this.camera.flash('#ef4444', 0.20);
         this.comboStreak = 0;
@@ -820,9 +856,20 @@ class Game {
         if (this.lives <= 0) {
             this.state = 'GAME_OVER';
             window.soundEngine?.playGameOver();
+            window.telemetry?.track('game_over', { levelId: this.currentLevel.id, score: this.score });
+
             document.getElementById('modalGameOver')?.classList.remove('hidden');
             const goScore = document.getElementById('gameOverFinalScore');
-            if (goScore) goScore.innerText = this.score;
+            const goStyle = document.getElementById('gameOverStyleScore');
+            const goCombo = document.getElementById('gameOverMaxCombo');
+            const goInk = document.getElementById('gameOverInkEarned');
+            const goXp = document.getElementById('gameOverXpEarned');
+
+            if (goScore) goScore.innerText = this.score.toLocaleString();
+            if (goStyle) goStyle.innerText = this.styleScore.toLocaleString();
+            if (goCombo) goCombo.innerText = `${this.maxComboStreak}x`;
+            if (goInk) goInk.innerText = `+${this.sessionInkEarned} 🖋️`;
+            if (goXp) goXp.innerText = `+${this.sessionXpEarned} XP`;
         } else {
             this.paddle.reset(this.width, this.height);
             this.balls = [new Ball(this.paddle.x + this.paddle.width / 2, this.paddle.y - 12)];
@@ -831,15 +878,13 @@ class Game {
 
     addScore(pts) {
         this.score += pts;
-        if (this.score > this.highScore) {
-            this.highScore = this.score;
-            localStorage.setItem('sketchoid_highscore', this.highScore.toString());
-        }
         this.updateHUD();
     }
 
     applyPowerup(type) {
         window.soundEngine?.playPowerupCollect(type);
+        window.progression?.discoverItem('powerups', type);
+        window.haptics?.medium();
         this.physicsWorld.hitStop.trigger(25);
         this.camera.impactZoom(1.02);
 
@@ -901,9 +946,6 @@ class Game {
         }
     }
 
-    /**
-     * Optimized Ruby Explosive Reaction
-     */
     triggerRubyNuke(centerBrick) {
         window.soundEngine?.playExplosion(true);
         const explosionRadius = 90;
@@ -965,7 +1007,6 @@ class Game {
         const effectiveDt = dt * this.timeScale;
         const timeNow = performance.now() / 1000;
 
-        // Drive Dynamic 5-Layer Adaptive Soundtrack
         window.soundEngine?.updateMusic(dt, this.comboStreak, this.isCrystalFrenzy, !!(this.boss && this.boss.isAlive), this.state === 'PLAYING');
 
         this.sketchbook.update(dt);
@@ -973,7 +1014,8 @@ class Game {
 
         if (this.state === 'PLAYING') {
             const paddleDt = this.slowmoTimer > 0 ? dt * 0.85 : effectiveDt;
-            this.paddle.update(paddleDt, this.inputState);
+            this.paddle.targetX = this.inputManager.state.paddleTargetX - this.paddle.width / 2;
+            this.paddle.update(paddleDt, this.inputManager.state);
             this.safetyNet.update(effectiveDt);
 
             for (const brick of this.bricks) brick.update(effectiveDt);
@@ -1010,11 +1052,11 @@ class Game {
                 if (!ball.isAlive) this.balls.splice(i, 1);
             }
 
-            if (this.balls.length === 0) {
+            if (this.balls.length === 0 && !this.godMode) {
                 this.handleBallLost();
             }
         } else if (this.state === 'MENU') {
-            this.paddle.update(effectiveDt, this.inputState);
+            this.paddle.update(effectiveDt, this.inputManager.state);
             if (this.balls[0]) this.balls[0].update(effectiveDt, this.width, this.height, this.paddle);
         }
 
@@ -1025,14 +1067,16 @@ class Game {
 
     updateHUD() {
         const scoreElem = document.getElementById('hudScore');
-        const highScoreElem = document.getElementById('hudHighScore');
         const livesElem = document.getElementById('hudLives');
         const comboElem = document.getElementById('hudCombo');
         const comboMultiplierElem = document.getElementById('hudMultiplier');
+        const inkElem = document.getElementById('hudInkVal');
+        const levelElem = document.getElementById('hudLevelVal');
 
         if (scoreElem) scoreElem.innerText = this.score.toLocaleString();
-        if (highScoreElem) highScoreElem.innerText = this.highScore.toLocaleString();
-        
+        if (inkElem && window.progression) inkElem.innerText = window.progression.data.player.ink.toLocaleString();
+        if (levelElem && window.progression) levelElem.innerText = `LVL ${window.progression.data.player.level}`;
+
         if (livesElem) {
             let hearts = '';
             for (let i = 0; i < this.lives; i++) hearts += '❤️ ';
@@ -1138,6 +1182,136 @@ class Game {
             this.lastTime = t;
             this.loop(t);
         });
+    }
+
+    openSketchbookModal(activeTab = 'chapters') {
+        const modal = document.getElementById('modalCollection');
+        if (!modal) return;
+
+        this.renderSketchbookTabs(activeTab);
+        modal.classList.remove('hidden');
+    }
+
+    renderSketchbookTabs(activeTab = 'chapters') {
+        const grid = document.getElementById('collectionItemsGrid');
+        if (!grid || !window.progression) return;
+
+        grid.innerHTML = '';
+        const pData = window.progression.data;
+
+        if (activeTab === 'chapters') {
+            for (let i = 0; i < window.LEVELS.length; i++) {
+                const lvl = window.LEVELS[i];
+                const stats = pData.levelStars[lvl.id] || { stars: 0, bestScore: 0 };
+                const card = document.createElement('div');
+                card.className = 'collection-card chapter-select-card';
+                card.onclick = () => {
+                    this.startGame(i);
+                };
+
+                let starStr = '';
+                for (let s = 0; s < 3; s++) starStr += s < stats.stars ? '★' : '☆';
+
+                card.innerHTML = `
+                    <div class="collection-icon">📖</div>
+                    <div class="collection-title">${lvl.name}</div>
+                    <div class="star-rating" style="color: #fbbf24; font-size: 1.1rem; margin: 4px 0;">${starStr}</div>
+                    <div class="collection-desc">Best: ${stats.bestScore.toLocaleString()}</div>
+                    <button class="btn-sketch btn-small" style="margin-top: 6px;">Draft Page</button>
+                `;
+                grid.appendChild(card);
+            }
+        } else if (activeTab === 'archive') {
+            const defs = window.progression.archiveDefinitions;
+            for (const cat in defs) {
+                for (const item of defs[cat]) {
+                    const isDiscovered = pData.discoveredItems[cat]?.includes(item.id);
+                    const card = document.createElement('div');
+                    card.className = `collection-card ${isDiscovered ? '' : 'locked'}`;
+                    card.innerHTML = `
+                        <div class="collection-icon">${isDiscovered ? item.icon : '❓'}</div>
+                        <div class="collection-title">${isDiscovered ? item.name : '???'}</div>
+                        <div class="collection-desc">${isDiscovered ? item.desc : 'Uncharted sketch object.'}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+            }
+        } else if (activeTab === 'achievements') {
+            for (const ach of window.progression.achievements) {
+                const completed = pData.completedAchievements.includes(ach.id);
+                const card = document.createElement('div');
+                card.className = `collection-card ${completed ? 'equipped' : 'locked'}`;
+                card.innerHTML = `
+                    <div class="collection-icon">${ach.badge}</div>
+                    <div class="collection-title">${ach.name}</div>
+                    <div class="collection-desc">${ach.desc}</div>
+                    <div class="reward-pill" style="margin-top: 6px; font-size: 0.75rem; color: #10b981;">+${ach.inkReward} 🖋️ &bull; +${ach.xpReward} XP</div>
+                `;
+                grid.appendChild(card);
+            }
+        } else if (activeTab === 'cosmetics') {
+            // Paddle Skins
+            for (const skin of window.progression.skins) {
+                const unlocked = pData.unlockedSkins.includes(skin.id);
+                const equipped = pData.player.selectedSkin === skin.id;
+                const card = document.createElement('div');
+                card.className = `collection-card ${equipped ? 'equipped' : ''}`;
+                card.innerHTML = `
+                    <div class="collection-icon">${skin.icon}</div>
+                    <div class="collection-title">${skin.name}</div>
+                    <div class="collection-desc">${skin.desc}</div>
+                    <button class="btn-sketch btn-small" style="margin-top: 6px;">${equipped ? 'EQUIPPED' : (unlocked ? 'EQUIP' : `UNLOCK (${skin.cost} 🖋️)`)}</button>
+                `;
+                card.onclick = () => {
+                    if (unlocked) {
+                        window.progression.selectSkin(skin.id);
+                        this.renderSketchbookTabs('cosmetics');
+                    } else {
+                        if (window.progression.unlockSkinWithInk(skin.id)) {
+                            this.renderSketchbookTabs('cosmetics');
+                            window.soundEngine?.playPowerupCollect('multiball');
+                        }
+                    }
+                };
+                grid.appendChild(card);
+            }
+        }
+    }
+
+    toggleDebugConsole() {
+        let debugPanel = document.getElementById('sketchoidDebugPanel');
+        if (!debugPanel) {
+            debugPanel = document.createElement('div');
+            debugPanel.id = 'sketchoidDebugPanel';
+            debugPanel.className = 'debug-panel';
+            debugPanel.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 6px;">🛠️ SKETCHOID DEV TOOLS</div>
+                <button id="dbgSkipLevel" class="btn-sketch btn-small">⏩ Skip Level</button>
+                <button id="dbgAddInk" class="btn-sketch btn-small">+500 🖋️ Ink</button>
+                <button id="dbgAddXp" class="btn-sketch btn-small">+1000 XP</button>
+                <button id="dbgMultiball" class="btn-sketch btn-small">⚡ Multiball</button>
+                <button id="dbgLaser" class="btn-sketch btn-small">🔫 Lasers</button>
+                <button id="dbgKillBoss" class="btn-sketch btn-small">💀 Kill Boss</button>
+            `;
+            document.body.appendChild(debugPanel);
+
+            document.getElementById('dbgSkipLevel')?.addEventListener('click', () => this.nextLevel());
+            document.getElementById('dbgAddInk')?.addEventListener('click', () => {
+                window.progression?.addInk(500);
+                this.updateHUD();
+            });
+            document.getElementById('dbgAddXp')?.addEventListener('click', () => {
+                window.progression?.addXp(1000);
+                this.updateHUD();
+            });
+            document.getElementById('dbgMultiball')?.addEventListener('click', () => this.applyPowerup('multiball'));
+            document.getElementById('dbgLaser')?.addEventListener('click', () => this.applyPowerup('laser'));
+            document.getElementById('dbgKillBoss')?.addEventListener('click', () => {
+                if (this.boss && this.boss.isAlive) this.boss.takeDamage(100);
+            });
+        } else {
+            debugPanel.style.display = debugPanel.style.display === 'none' ? 'flex' : 'none';
+        }
     }
 }
 

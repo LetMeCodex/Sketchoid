@@ -20,8 +20,7 @@
             <span class="logo-badge">Living Sketchbook</span>
         </div>
         <div class="top-actions">
-            <button id="btnCollection" class="btn-sketch" title="Notebook Collection">📖 Collection</button>
-            <button id="btnChallenges" class="btn-sketch" title="Challenge Modes">⚔️ Challenges</button>
+            <button id="btnCollection" class="btn-sketch" title="Notebook Collection">📖 My Sketchbook</button>
             <button id="btnSettings" class="btn-sketch" title="Settings & Accessibility">⚙️ Settings</button>
             <button id="btnTheme" class="btn-sketch" title="Switch Theme (Key: T)">🎨 Theme</button>
             <button id="btnMute" class="btn-sketch" title="Toggle Sound (Key: M)">🔊 Sound</button>
@@ -43,10 +42,14 @@
                     <span class="hud-label">SCORE</span>
                     <span id="hudScore" class="hud-value">0</span>
                 </div>
-                <!-- Sticky Note for High Score -->
-                <div class="hud-item sticky-note high-score-note">
-                    <span class="hud-label">RECORD ★</span>
-                    <span id="hudHighScore" class="hud-value">0</span>
+                <!-- Sticky Note for Ink Currency & Level -->
+                <div class="hud-item sticky-note ink-note">
+                    <span class="hud-label">INK 🖋️</span>
+                    <span id="hudInkVal" class="hud-value" style="color: #38bdf8;">0</span>
+                </div>
+                <div class="hud-item taped-tab">
+                    <span class="hud-label">RANK</span>
+                    <span id="hudLevelVal" class="hud-level-tag" style="color: #fbbf24;">LVL 1</span>
                 </div>
             </div>
 
@@ -82,12 +85,12 @@
         <div id="modalMenu" class="modal-overlay">
             <div class="modal-card">
                 <h2>✏️ SKETCHOID</h2>
-                <p>Welcome to the <strong>Living Sketchbook</strong>! Move with <strong>Mouse</strong> or <strong>A / D</strong>. Launch with <strong>Space / Click</strong> to shatter crystals, navigate portals, and battle <strong>The Arch-Pencil</strong>!</p>
+                <p>Welcome to the <strong>Living Sketchbook</strong>! Move with <strong>Mouse / Touch</strong> or <strong>A / D</strong>. Launch with <strong>Space / Click</strong> to shatter crystals, earn Ink, and draft your personal sketchbook!</p>
 
                 <div class="feature-preview-grid">
                     <div class="feature-pill">💎 <strong>Materials:</strong> Ruby, Sapphire, Emerald, Amber, Amethyst</div>
-                    <div class="feature-pill">📐 <strong>Geometry:</strong> Windmills, Portals, Gravity Wells</div>
-                    <div class="feature-pill">✏️ <strong>Boss Battle:</strong> The Arch-Pencil Live Drafter</div>
+                    <div class="feature-pill">🧼 <strong>Bosses:</strong> The Eraser, The Living Ink, The Arch-Pencil</div>
+                    <div class="feature-pill">★ <strong>3-Star Mastery:</strong> High-skill bank shots & recovery</div>
                     <div class="feature-pill">🎵 <strong>Dynamic Audio:</strong> 5-Layer Adaptive Pentatonic Symphony</div>
                 </div>
 
@@ -98,16 +101,17 @@
             </div>
         </div>
 
-        <!-- Notebook Collection Modal -->
+        <!-- Persistent My Sketchbook Modal -->
         <div id="modalCollection" class="modal-overlay hidden">
             <div class="modal-card modal-card-wide">
-                <h2>📖 Notebook Collection</h2>
-                <p>Unlock custom paddle skins, dynamic ball trails, and achievement badges through gameplay!</p>
+                <h2>📖 My Sketchbook</h2>
+                <p>Track your campaign stars, discover sketchbook archive objects, and unlock custom drafting tools!</p>
 
                 <div class="tab-bar">
-                    <button class="tab-btn active" id="tabSkins">Paddle Skins</button>
-                    <button class="tab-btn" id="tabTrails">Ball Trails</button>
-                    <button class="tab-btn" id="tabBadges">Badges</button>
+                    <button class="tab-btn active" id="tabChapters" onclick="if(window.game) window.game.renderSketchbookTabs('chapters');">📖 Chapters</button>
+                    <button class="tab-btn" id="tabArchive" onclick="if(window.game) window.game.renderSketchbookTabs('archive');">💎 Archive</button>
+                    <button class="tab-btn" id="tabAchievements" onclick="if(window.game) window.game.renderSketchbookTabs('achievements');">🏆 Achievements</button>
+                    <button class="tab-btn" id="tabCosmetics" onclick="if(window.game) window.game.renderSketchbookTabs('cosmetics');">🎨 Cosmetics</button>
                 </div>
 
                 <div id="collectionItemsGrid" class="item-grid">
@@ -115,23 +119,7 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnCloseCollection" class="btn-sketch btn-large btn-secondary">Close Collection</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Challenge Modes Modal -->
-        <div id="modalChallenges" class="modal-overlay hidden">
-            <div class="modal-card modal-card-wide">
-                <h2>⚔️ Challenge Modes</h2>
-                <p>Test your trajectory drafting mastery with bespoke modifiers and unique rulesets!</p>
-
-                <div id="challengesGrid" class="item-grid">
-                    <!-- Populated dynamically via JS -->
-                </div>
-
-                <div class="modal-actions">
-                    <button id="btnCloseChallenges" class="btn-sketch btn-large btn-secondary">Close Challenges</button>
+                    <button id="btnCloseCollection" class="btn-sketch btn-large btn-secondary">Close Sketchbook</button>
                 </div>
             </div>
         </div>
@@ -189,12 +177,24 @@
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
-                        <span class="hud-label">Current Score</span>
+                        <span class="hud-label">Mastery Stars</span>
+                        <span id="clearStarsDisplay" class="hud-value" style="color: #fbbf24; font-size: 1.6rem;">★ ★ ★</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Score</span>
                         <span id="clearScore" class="hud-value" style="color: #10b981;">0</span>
                     </div>
                     <div class="modal-stat-box">
-                        <span class="hud-label">Max Combo Streak</span>
+                        <span class="hud-label">Max Combo</span>
                         <span id="clearCombo" class="hud-value" style="color: #fbbf24;">0x</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Ink Earned</span>
+                        <span id="clearInkReward" class="hud-value" style="color: #38bdf8;">+20 🖋️</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">XP Earned</span>
+                        <span id="clearXpReward" class="hud-value" style="color: #a855f7;">+100 XP</span>
                     </div>
                 </div>
 
@@ -207,13 +207,29 @@
         <!-- Game Over Modal -->
         <div id="modalGameOver" class="modal-overlay hidden">
             <div class="modal-card">
-                <h2>💀 Game Over</h2>
-                <p>All kinetic spheres lost to the void! Ready for another run?</p>
+                <h2>💀 Run Complete</h2>
+                <p>Your drafting session has concluded. Progress and earned Ink are saved!</p>
 
                 <div class="modal-stats">
                     <div class="modal-stat-box">
                         <span class="hud-label">Final Score</span>
                         <span id="gameOverFinalScore" class="hud-value" style="color: #ef4444;">0</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Style Score</span>
+                        <span id="gameOverStyleScore" class="hud-value" style="color: #38bdf8;">0</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Max Combo</span>
+                        <span id="gameOverMaxCombo" class="hud-value" style="color: #fbbf24;">0x</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">Ink Earned</span>
+                        <span id="gameOverInkEarned" class="hud-value" style="color: #38bdf8;">+0 🖋️</span>
+                    </div>
+                    <div class="modal-stat-box">
+                        <span class="hud-label">XP Earned</span>
+                        <span id="gameOverXpEarned" class="hud-value" style="color: #a855f7;">+0 XP</span>
                     </div>
                 </div>
 
@@ -255,12 +271,14 @@
                 <span class="legend-chip">🟡 Gold (Drop)</span>
             </div>
             <div>
-                <span>[Mouse / A-D]: Move &bull; [Space / Click]: Launch & Laser &bull; [P]: Pause &bull; [T]: Theme</span>
+                <span>[Mouse / Touch / A-D]: Move &bull; [Space / Click / Tap]: Launch &bull; [P]: Pause &bull; [`]: Dev Tools</span>
             </div>
         </div>
     </main>
 
     <!-- Game Engine Scripts in Order -->
+    <script src="js/events.js"></script>
+    <script src="js/input.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/particles.js"></script>
     <script src="js/levels.js"></script>

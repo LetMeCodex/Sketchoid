@@ -1,54 +1,115 @@
 /**
- * SKETCHOID Progression & Notebook Collection System
- * Persistent unlocks for Themes, Paddle Skins, Ball Trails, and Achievement Badges
+ * SKETCHOID Persistent Progression & Meta-Game Architecture (Save Version 1.0)
+ * Handles Player XP & Level, Ink Currency, 3-Star Level Mastery,
+ * Sketch Archive Discovery, Achievements, Titles, and Corruption-Safe Persistence.
  */
+
+const SAVE_VERSION = 1;
 
 class ProgressionManager {
     constructor() {
-        this.storageKey = 'sketchoid_progression_v1';
-        this.data = {
-            unlockedSkins: ['classic'],
-            unlockedTrails: ['charcoal'],
-            unlockedThemes: ['blueprint', 'parchment', 'neon'],
-            selectedSkin: 'classic',
-            selectedTrail: 'charcoal',
-            selectedTheme: 'blueprint',
-            stats: {
-                bricksBroken: 0,
-                bossDefeated: 0,
-                nearMisses: 0,
-                portalsUsed: 0,
-                highestCombo: 0,
-                stagesCleared: 0,
-                challengesBeaten: []
-            },
-            badges: []
+        this.storageKey = 'sketchoid_save_v1';
+        this.data = this.getDefaultSaveData();
+
+        // Data-Driven Archive of Sketchbook Discoveries
+        this.archiveDefinitions = {
+            crystals: [
+                { id: 'emerald', name: 'Emerald Prism', desc: 'Accelerates trajectory velocity on impact.', icon: '🟢', tier: 'Common' },
+                { id: 'amber', name: 'Amber Bastion', desc: 'Structural weakpoint; fractures adjacent amber bricks.', icon: '🟠', tier: 'Uncommon' },
+                { id: 'sapphire', name: 'Sapphire Crystal', desc: 'Resonates harmonic frequencies, imparting kinetic energy.', icon: '🔵', tier: 'Uncommon' },
+                { id: 'ruby', name: 'Ruby Core', desc: 'Explosive volatility; detonates localized blast radius.', icon: '🔴', tier: 'Rare' },
+                { id: 'amethyst', name: 'Amethyst Monolith', desc: '4-layer armored crystal requiring heavy continuous bombardment.', icon: '🟣', tier: 'Epic' },
+                { id: 'gold', name: 'Golden Vault', desc: 'Rewards fortunate drafters with high scores and powerup drops.', icon: '🟡', tier: 'Legendary' },
+                { id: 'obsidian', name: 'Obsidian Barrier', desc: 'Indestructible environmental drafting boundary.', icon: '⬛', tier: 'Ancient' }
+            ],
+            powerups: [
+                { id: 'multiball', name: '3x Multiball', desc: 'Triplicates active kinetic spheres.', icon: '⚡' },
+                { id: 'wide', name: 'Wide Paddle Extension', desc: 'Expands the drafting ruler by 65%.', icon: '🛡️' },
+                { id: 'laser', name: 'Laser Turrets', desc: 'Equips mechanical lead-firing blasters.', icon: '🔫' },
+                { id: 'fireball', name: 'Meteor Fireball', desc: 'Punches clean through multiple crystal layers.', icon: '🔥' },
+                { id: 'shield', name: 'Safety Net', desc: 'Deploys an elastic trampoline bounce line.', icon: '🕸️' },
+                { id: 'slowmo', name: 'Chrono Dilation', desc: 'Slows down time for surgical precision bank shots.', icon: '⏱️' }
+            ],
+            bosses: [
+                { id: 'eraser', name: 'The Eraser', desc: 'The Void Rub-Out erasing intact crystals mid-flight.', icon: '🧼' },
+                { id: 'ink', name: 'The Living Ink', desc: 'Viscous floor reservoir constricting paddle movement.', icon: '🖋️' },
+                { id: 'pencil', name: 'The Arch-Pencil', desc: 'The Sentient Drafter sketching solid obstacles onto canvas.', icon: '✏️' }
+            ]
         };
 
-        this.badgeDefinitions = [
-            { id: 'first_blood', name: 'First Sketch', desc: 'Destroy your first crystal brick', icon: '✏️' },
-            { id: 'near_miss_ace', name: 'Razor Edge', desc: 'Perform 10 close-shave Near Misses', icon: '⚡' },
-            { id: 'portal_voyager', name: 'Quantum Leap', desc: 'Pass through 5 Ink Portals', icon: '🌀' },
-            { id: 'combo_virtuoso', name: 'Crystal Maestro', desc: 'Achieve a 15x Combo Streak', icon: '🎵' },
-            { id: 'boss_slayer', name: 'Lead Shatterer', desc: 'Defeat The Arch-Pencil in Sector 5', icon: '🏆' },
-            { id: 'challenge_champion', name: 'Master Drafter', desc: 'Complete any 3 Challenge Modes', icon: '🎖️' }
+        // Data-Driven Achievements
+        this.achievements = [
+            { id: 'first_draft', name: 'First Line', desc: 'Complete Sector 1 of the Campaign.', category: 'CAMPAIGN', xpReward: 100, inkReward: 25, badge: '✏️', condition: (d) => (d.stats.stagesCleared || 0) >= 1 },
+            { id: 'bank_master', name: 'Angle Obsessed', desc: 'Perform 15 Bank Shots off side margins.', category: 'SKILL', xpReward: 200, inkReward: 50, badge: '📐', condition: (d) => (d.stats.bankShots || 0) >= 15 },
+            { id: 'near_miss_ace', name: 'Razor Edge', desc: 'Perform 20 close-shave Near Misses.', category: 'SKILL', xpReward: 250, inkReward: 60, badge: '⚡', condition: (d) => (d.stats.nearMisses || 0) >= 20 },
+            { id: 'combo_maestro', name: 'Crystal Symphony', desc: 'Reach a 15x Pentatonic Combo streak.', category: 'COMBO', xpReward: 300, inkReward: 80, badge: '🎵', condition: (d) => (d.stats.highestCombo || 0) >= 15 },
+            { id: 'brick_demolisher', name: 'Paper Cut', desc: 'Destroy 250 crystal bricks.', category: 'GAMEPLAY', xpReward: 350, inkReward: 100, badge: '💥', condition: (d) => (d.stats.bricksBroken || 0) >= 250 },
+            { id: 'star_collector', name: 'Constellation Drafter', desc: 'Earn 10 Mastery Stars across the campaign.', category: 'MASTERY', xpReward: 400, inkReward: 120, badge: '★', condition: (d) => d.totalStars >= 10 },
+            { id: 'eraser_slayer', name: 'Clean Sheet', desc: 'Vanquish The Eraser boss in Sector 3.', category: 'BOSS', xpReward: 500, inkReward: 150, badge: '🧼', condition: (d) => (d.stats.bossDefeated || 0) >= 1 },
+            { id: 'ink_slayer', name: 'Blotter', desc: 'Vanquish The Living Ink boss in Sector 4.', category: 'BOSS', xpReward: 600, inkReward: 200, badge: '🖋️', condition: (d) => (d.stats.bossDefeated || 0) >= 2 },
+            { id: 'arch_slayer', name: 'Lead Shatterer', desc: 'Vanquish The Arch-Pencil in Sector 5.', category: 'BOSS', xpReward: 800, inkReward: 300, badge: '🏆', condition: (d) => (d.stats.bossDefeated || 0) >= 3 }
         ];
 
+        // Cosmetics Catalog
         this.skins = [
-            { id: 'classic', name: 'Standard Sketch', desc: 'The trusty hand-drawn charcoal paddle', icon: '📐', unlockReq: 'Default' },
-            { id: 'ruler', name: 'Architect Metric Ruler', desc: 'Precise wooden drafting ruler with brass edge', icon: '📏', unlockReq: 'Break 100 Bricks' },
-            { id: 'quill', name: 'Feather Calligraphy Quill', desc: 'Vintage swan feather with gold-plated nib', icon: '🪶', unlockReq: 'Perform 10 Near Misses' },
-            { id: 'gold', name: '24K Golden Stylus', desc: 'Gleaming executive golden drafting stylus', icon: '✨', unlockReq: 'Defeat The Arch-Pencil' }
+            { id: 'classic', name: 'Standard Sketch', desc: 'The trusty hand-drawn charcoal paddle', icon: '📐', cost: 0, unlocked: true },
+            { id: 'ruler', name: 'Architect Metric Ruler', desc: 'Precise wooden drafting ruler with brass ticks', icon: '📏', cost: 120, unlocked: false },
+            { id: 'quill', name: 'Feather Calligraphy Quill', desc: 'Vintage swan feather with gold-plated nib', icon: '🪶', cost: 240, unlocked: false },
+            { id: 'gold', name: '24K Golden Stylus', desc: 'Gleaming executive golden drafting stylus', icon: '✨', cost: 500, unlocked: false }
         ];
 
         this.trails = [
-            { id: 'charcoal', name: 'Charcoal Dust', desc: 'Soft sketch pencil particle trail', color: '#94a3b8', unlockReq: 'Default' },
-            { id: 'rainbow', name: 'Prismatic Spectrum', desc: 'Cycling rainbow chromatic dispersion', color: '#f43f5e', unlockReq: 'Achieve 10x Combo' },
-            { id: 'nebula', name: 'Quantum Nebula', desc: 'Deep cosmic celestial vortex glow', color: '#a855f7', unlockReq: 'Use 5 Portals' },
-            { id: 'neon', name: 'Electric Spark', desc: 'High-voltage electric lightning arcs', color: '#38bdf8', unlockReq: 'Clear 3 Sectors' }
+            { id: 'charcoal', name: 'Charcoal Dust', desc: 'Soft sketch pencil particle trail', color: '#94a3b8', cost: 0, unlocked: true },
+            { id: 'rainbow', name: 'Prismatic Spectrum', desc: 'Cycling chromatic dispersion', color: '#f43f5e', cost: 150, unlocked: false },
+            { id: 'nebula', name: 'Quantum Nebula', desc: 'Deep cosmic celestial vortex glow', color: '#a855f7', cost: 280, unlocked: false },
+            { id: 'neon', name: 'Electric Spark', desc: 'High-voltage electric lightning arcs', color: '#38bdf8', cost: 420, unlocked: false }
+        ];
+
+        this.titles = [
+            { id: 'apprentice', name: 'Ink Apprentice', reqLevel: 1 },
+            { id: 'drafter', name: 'Trajectory Drafter', reqLevel: 3 },
+            { id: 'artist', name: 'Combo Artist', reqLevel: 5 },
+            { id: 'master', name: 'Grand Sketch Master', reqLevel: 8 },
+            { id: 'legend', name: 'Living Notebook Legend', reqLevel: 10 }
         ];
 
         this.load();
+    }
+
+    getDefaultSaveData() {
+        return {
+            version: SAVE_VERSION,
+            player: {
+                level: 1,
+                xp: 0,
+                ink: 0,
+                selectedSkin: 'classic',
+                selectedTrail: 'charcoal',
+                selectedTitle: 'Ink Apprentice'
+            },
+            unlockedSkins: ['classic'],
+            unlockedTrails: ['charcoal'],
+            unlockedThemes: ['blueprint', 'parchment', 'neon'],
+            discoveredItems: {
+                crystals: ['emerald'],
+                powerups: ['multiball'],
+                bosses: []
+            },
+            levelStars: {}, // { [levelId]: { stars: number, bestScore: number, bestStyle: number, bestCombo: number } }
+            completedAchievements: [],
+            totalStars: 0,
+            stats: {
+                bricksBroken: 0,
+                bankShots: 0,
+                nearMisses: 0,
+                perfectRebounds: 0,
+                portalsUsed: 0,
+                highestCombo: 0,
+                stagesCleared: 0,
+                bossDefeated: 0,
+                totalRuns: 0
+            }
+        };
     }
 
     load() {
@@ -56,97 +117,168 @@ class ProgressionManager {
             const raw = localStorage.getItem(this.storageKey);
             if (raw) {
                 const parsed = JSON.parse(raw);
-                this.data = { ...this.data, ...parsed };
+                if (parsed && typeof parsed === 'object') {
+                    this.data = this.mergeWithDefaults(parsed);
+                    this.calculateTotalStars();
+                }
             }
         } catch (e) {
-            console.error('Error loading progression:', e);
+            console.warn('Save data corrupted or unreadable. Initializing default save:', e);
+            this.data = this.getDefaultSaveData();
+            this.save();
         }
+    }
+
+    mergeWithDefaults(loaded) {
+        const defaults = this.getDefaultSaveData();
+        return {
+            ...defaults,
+            ...loaded,
+            player: { ...defaults.player, ...(loaded.player || {}) },
+            discoveredItems: { ...defaults.discoveredItems, ...(loaded.discoveredItems || {}) },
+            stats: { ...defaults.stats, ...(loaded.stats || {}) },
+            levelStars: loaded.levelStars || {},
+            unlockedSkins: loaded.unlockedSkins || defaults.unlockedSkins,
+            unlockedTrails: loaded.unlockedTrails || defaults.unlockedTrails,
+            completedAchievements: loaded.completedAchievements || []
+        };
     }
 
     save() {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.data));
         } catch (e) {
-            console.error('Error saving progression:', e);
+            console.error('Error writing save data to localStorage:', e);
+        }
+    }
+
+    calculateTotalStars() {
+        let stars = 0;
+        for (const lvlId in this.data.levelStars) {
+            stars += this.data.levelStars[lvlId].stars || 0;
+        }
+        this.data.totalStars = stars;
+    }
+
+    getXpForNextLevel(level) {
+        return Math.round(250 * Math.pow(1.32, level - 1));
+    }
+
+    addXp(amount) {
+        if (amount <= 0) return;
+        this.data.player.xp += amount;
+
+        let needed = this.getXpForNextLevel(this.data.player.level);
+        while (this.data.player.xp >= needed) {
+            this.data.player.xp -= needed;
+            this.data.player.level++;
+            window.soundEngine?.playPowerupCollect('wide');
+            window.haptics?.success();
+            window.particleSystem?.addFloatingText(`✨ LEVEL UP: LVL ${this.data.player.level}!`, 400, 240, '#fbbf24', 1.8, true);
+            needed = this.getXpForNextLevel(this.data.player.level);
+        }
+        this.checkAchievements();
+        this.save();
+    }
+
+    addInk(amount) {
+        if (amount <= 0) return;
+        this.data.player.ink += amount;
+        this.save();
+    }
+
+    discoverItem(category, itemId) {
+        if (!this.data.discoveredItems[category]) {
+            this.data.discoveredItems[category] = [];
+        }
+        if (!this.data.discoveredItems[category].includes(itemId)) {
+            this.data.discoveredItems[category].push(itemId);
+            this.save();
         }
     }
 
     recordStat(statKey, increment = 1) {
         if (this.data.stats[statKey] !== undefined) {
             this.data.stats[statKey] += increment;
-            this.checkUnlocks();
+            this.checkAchievements();
             this.save();
         }
     }
 
-    checkUnlocks() {
-        const stats = this.data.stats;
+    recordLevelCompletion(levelId, score, styleScore, combo, isThreeStarEligible = false) {
+        this.data.stats.stagesCleared++;
+        this.calculateTotalStars();
 
-        // Skins
-        if (stats.bricksBroken >= 100 && !this.data.unlockedSkins.includes('ruler')) {
-            this.unlockSkin('ruler');
-        }
-        if (stats.nearMisses >= 10 && !this.data.unlockedSkins.includes('quill')) {
-            this.unlockSkin('quill');
-        }
-        if (stats.bossDefeated >= 1 && !this.data.unlockedSkins.includes('gold')) {
-            this.unlockSkin('gold');
-        }
+        let earnedStars = 1;
+        if (score >= 4000) earnedStars = 2;
+        if (isThreeStarEligible && score >= 5000) earnedStars = 3;
 
-        // Trails
-        if (stats.highestCombo >= 10 && !this.data.unlockedTrails.includes('rainbow')) {
-            this.unlockTrail('rainbow');
-        }
-        if (stats.portalsUsed >= 5 && !this.data.unlockedTrails.includes('nebula')) {
-            this.unlockTrail('nebula');
-        }
-        if (stats.stagesCleared >= 3 && !this.data.unlockedTrails.includes('neon')) {
-            this.unlockTrail('neon');
-        }
+        const prev = this.data.levelStars[levelId] || { stars: 0, bestScore: 0, bestStyle: 0, bestCombo: 0 };
+        const newStars = Math.max(prev.stars, earnedStars);
+        const bestScore = Math.max(prev.bestScore, score);
+        const bestStyle = Math.max(prev.bestStyle, styleScore);
+        const bestCombo = Math.max(prev.bestCombo, combo);
 
-        // Badges
-        if (stats.bricksBroken >= 1) this.grantBadge('first_blood');
-        if (stats.nearMisses >= 10) this.grantBadge('near_miss_ace');
-        if (stats.portalsUsed >= 5) this.grantBadge('portal_voyager');
-        if (stats.highestCombo >= 15) this.grantBadge('combo_virtuoso');
-        if (stats.bossDefeated >= 1) this.grantBadge('boss_slayer');
-        if (stats.challengesBeaten.length >= 3) this.grantBadge('challenge_champion');
+        this.data.levelStars[levelId] = {
+            stars: newStars,
+            bestScore,
+            bestStyle,
+            bestCombo
+        };
+
+        this.calculateTotalStars();
+        this.checkAchievements();
+        this.save();
+
+        return {
+            stars: earnedStars,
+            isNewBest: score > prev.bestScore
+        };
     }
 
-    unlockSkin(skinId) {
-        if (!this.data.unlockedSkins.includes(skinId)) {
-            this.data.unlockedSkins.push(skinId);
-            const skin = this.skins.find(s => s.id === skinId);
-            window.particleSystem?.addFloatingText(`🔓 UNLOCKED SKIN: ${skin.name}!`, 400, 300, '#fbbf24', 1.8, true);
-            window.soundEngine?.playPowerupCollect('multiball');
-            this.save();
-        }
-    }
-
-    unlockTrail(trailId) {
-        if (!this.data.unlockedTrails.includes(trailId)) {
-            this.data.unlockedTrails.push(trailId);
-            const trail = this.trails.find(t => t.id === trailId);
-            window.particleSystem?.addFloatingText(`🔓 UNLOCKED TRAIL: ${trail.name}!`, 400, 300, '#38bdf8', 1.8, true);
-            window.soundEngine?.playPowerupCollect('multiball');
-            this.save();
-        }
-    }
-
-    grantBadge(badgeId) {
-        if (!this.data.badges.includes(badgeId)) {
-            this.data.badges.push(badgeId);
-            const badge = this.badgeDefinitions.find(b => b.id === badgeId);
-            if (badge) {
-                window.particleSystem?.addFloatingText(`🏅 BADGE: ${badge.name}!`, 400, 260, '#10b981', 2.0, true);
+    checkAchievements() {
+        for (const ach of this.achievements) {
+            if (!this.data.completedAchievements.includes(ach.id)) {
+                if (ach.condition(this.data)) {
+                    this.data.completedAchievements.push(ach.id);
+                    this.addXp(ach.xpReward);
+                    this.addInk(ach.inkReward);
+                    window.haptics?.success();
+                    window.particleSystem?.addFloatingText(`🏆 ACHIEVEMENT: ${ach.name}! (+${ach.inkReward} Ink)`, 400, 220, '#10b981', 1.8, true);
+                    window.soundEngine?.playLevelClear();
+                    window.telemetry?.track('achievement_unlocked', { id: ach.id, name: ach.name });
+                }
             }
-            this.save();
         }
+    }
+
+    unlockSkinWithInk(skinId) {
+        const skin = this.skins.find(s => s.id === skinId);
+        if (!skin || this.data.unlockedSkins.includes(skinId)) return false;
+        if (this.data.player.ink >= skin.cost) {
+            this.data.player.ink -= skin.cost;
+            this.data.unlockedSkins.push(skinId);
+            this.save();
+            return true;
+        }
+        return false;
+    }
+
+    unlockTrailWithInk(trailId) {
+        const trail = this.trails.find(t => t.id === trailId);
+        if (!trail || this.data.unlockedTrails.includes(trailId)) return false;
+        if (this.data.player.ink >= trail.cost) {
+            this.data.player.ink -= trail.cost;
+            this.data.unlockedTrails.push(trailId);
+            this.save();
+            return true;
+        }
+        return false;
     }
 
     selectSkin(skinId) {
         if (this.data.unlockedSkins.includes(skinId)) {
-            this.data.selectedSkin = skinId;
+            this.data.player.selectedSkin = skinId;
             this.save();
             return true;
         }
@@ -155,7 +287,7 @@ class ProgressionManager {
 
     selectTrail(trailId) {
         if (this.data.unlockedTrails.includes(trailId)) {
-            this.data.selectedTrail = trailId;
+            this.data.player.selectedTrail = trailId;
             this.save();
             return true;
         }
