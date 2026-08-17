@@ -65,6 +65,14 @@ class Paddle {
         this.wideTimer = 0;
     }
 
+    resize(canvasWidth, canvasHeight) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        this.y = canvasHeight - 48;
+        this.x = Math.max(8, Math.min(canvasWidth - this.width - 8, this.x));
+        this.targetX = this.x;
+    }
+
     triggerSquash(impactOffset = 0) {
         this.scaleY = 0.58;
         this.scaleX = 1.35;
@@ -972,6 +980,12 @@ class SafetyNet {
         this.springY = 0;
         this.springVel = 0;
         this.seed = Math.floor(Math.random() * 1000);
+    }
+
+    resize(canvasWidth, canvasHeight) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        this.y = canvasHeight - 12;
     }
 
     activate(uses = 1) {

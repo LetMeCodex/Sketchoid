@@ -54,6 +54,12 @@ class SketchbookWorld {
         this.initWeather();
     }
 
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.initWeather();
+    }
+
     recordBrickDestroyed(x, y) {
         this.paperDamage += 1;
         if (this.creases.length < this.maxCreases && Math.random() < 0.35) {

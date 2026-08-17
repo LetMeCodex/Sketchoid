@@ -58,6 +58,15 @@ class Camera2D {
         this.flashAlpha = 0;
     }
 
+    resize(viewWidth, viewHeight) {
+        this.viewWidth = viewWidth;
+        this.viewHeight = viewHeight;
+        this.x = viewWidth / 2;
+        this.y = viewHeight / 2;
+        this.targetX = this.x;
+        this.targetY = this.y;
+    }
+
     /**
      * Add trauma with diminishing returns to prevent disorientation during combo bursts
      */

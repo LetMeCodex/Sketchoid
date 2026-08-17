@@ -126,9 +126,71 @@ class Game {
         this.setupCentralizedEventBuses();
         this.logo3d = new Sketchoid3DLogo(document.getElementById('sketchoid-3d-logo'));
         this.themeToggle = new ThemeToggle(document.getElementById('theme-toggle-btn'), this);
+        this.setupResponsiveResolution();
         this.loadLevel(0);
         this.updateHUD();
         ModalArtRenderer.drawHeaderDiorama(document.getElementById('menu-art-canvas'), 'menu');
+    }
+
+    setupResponsiveResolution() {
+        const updateSize = () => {
+            const isMobile = window.innerWidth <= 768 || window.innerHeight > window.innerWidth;
+            if (isMobile) {
+                // Tall mobile portrait: 600 width, dynamic height matching phone viewport
+                const headerH = document.querySelector('header')?.offsetHeight || 38;
+                const hudH = document.querySelector('.hud-bar')?.offsetHeight || 44;
+                const touchBarH = document.getElementById('mobileTouchBar')?.offsetHeight || 32;
+                const availableH = window.innerHeight - headerH - hudH - touchBarH - 24;
+                const availableW = window.innerWidth - 12;
+                
+                const targetW = 600;
+                const aspect = Math.max(1.30, Math.min(1.85, availableH / Math.max(1, availableW)));
+                const targetH = Math.round(targetW * aspect);
+
+                if (this.width !== targetW || this.height !== targetH) {
+                    this.width = targetW;
+                    this.height = targetH;
+                    this.canvas.width = this.width;
+                    this.canvas.height = this.height;
+
+                    this.camera?.resize(this.width, this.height);
+                    this.physicsWorld?.resize(this.width, this.height);
+                    this.sketchbook?.resize(this.width, this.height);
+                    this.inputManager?.resize(this.width, this.height);
+                    this.paddle?.resize(this.width, this.height);
+                    this.safetyNet?.resize(this.width, this.height);
+
+                    if (this.currentLevel) {
+                        this.loadLevel(this.levelIndex);
+                    }
+                }
+            } else {
+                // Desktop Landscape: 800 x 640
+                const targetW = 800;
+                const targetH = 640;
+                if (this.width !== targetW || this.height !== targetH) {
+                    this.width = targetW;
+                    this.height = targetH;
+                    this.canvas.width = this.width;
+                    this.canvas.height = this.height;
+
+                    this.camera?.resize(this.width, this.height);
+                    this.physicsWorld?.resize(this.width, this.height);
+                    this.sketchbook?.resize(this.width, this.height);
+                    this.inputManager?.resize(this.width, this.height);
+                    this.paddle?.resize(this.width, this.height);
+                    this.safetyNet?.resize(this.width, this.height);
+
+                    if (this.currentLevel) {
+                        this.loadLevel(this.levelIndex);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('resize', () => updateSize());
+        window.addEventListener('orientationchange', () => setTimeout(updateSize, 100));
+        updateSize();
     }
 
     createFallbackRenderer() {
@@ -720,12 +782,13 @@ class Game {
         const totalRows = rows.length;
         const totalCols = rows[0].length;
 
-        const brickMargin = 5;
-        const topOffset = this.boss ? 150 : 70;
-        const sidePadding = 40;
+        const isMobile = this.width < 700;
+        const brickMargin = isMobile ? 4 : 5;
+        const topOffset = this.boss ? (isMobile ? 180 : 150) : (isMobile ? 90 : 70);
+        const sidePadding = isMobile ? 32 : 40;
         const totalUsableWidth = this.width - sidePadding * 2;
         const brickW = (totalUsableWidth - (totalCols - 1) * brickMargin) / totalCols;
-        const brickH = 22;
+        const brickH = isMobile ? 26 : 22;
 
         const codeToTypeKey = {
             'E': 'EMERALD',

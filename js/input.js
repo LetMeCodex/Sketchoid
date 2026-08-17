@@ -22,6 +22,11 @@ class InputManager {
         this.setupListeners();
     }
 
+    resize(gameWidth, gameHeight) {
+        this.gameWidth = gameWidth;
+        this.gameHeight = gameHeight;
+    }
+
     setupListeners() {
         // 1. Pointer & Mouse Movement on Canvas
         const handlePointerMove = (clientX, clientY) => {

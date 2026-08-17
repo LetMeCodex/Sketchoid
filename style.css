@@ -1136,25 +1136,31 @@ h1 {
     .game-container {
         width: 100%;
         max-width: 100%;
+        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
+        min-height: 0;
     }
 
     .canvas-wrapper {
         width: 100%;
+        flex: 1;
         display: flex;
         justify-content: center;
         align-items: center;
+        min-height: 0;
         touch-action: none;
     }
 
     #gameCanvas {
         width: 100% !important;
+        height: 100% !important;
         max-width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 800 / 640 !important;
+        max-height: 100% !important;
+        aspect-ratio: unset !important;
+        object-fit: fill !important;
         border: 2.5px solid var(--border-sketch) !important;
         border-radius: 8px !important;
         box-shadow: 2px 3px 0px var(--shadow-color) !important;

@@ -151,6 +151,12 @@ class PhysicsWorld {
         this.onEvent = null;
     }
 
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.spatialGrid = new SpatialGrid(width, height, 64);
+    }
+
     emit(type, payload) {
         if (this.onEvent) {
             this.onEvent(type, payload);

@@ -22,13 +22,21 @@ class InputManager {
         this.setupListeners();
     }
 
+    resize(gameWidth, gameHeight) {
+        this.gameWidth = gameWidth;
+        this.gameHeight = gameHeight;
+    }
+
     setupListeners() {
         // 1. Pointer & Mouse Movement on Canvas
         const handlePointerMove = (clientX, clientY) => {
             const rect = this.canvas.getBoundingClientRect();
+            if (rect.width <= 0) return;
             const scaleX = this.gameWidth / rect.width;
-            const xInGame = (clientX - rect.left) * scaleX;
-            this.state.paddleTargetX = Math.max(0, Math.min(this.gameWidth, xInGame));
+            // Center the paddle under the pointer/finger
+            const paddleHalfWidth = (window.game?.paddle?.width || 110) / 2;
+            const xInGame = ((clientX - rect.left) * scaleX) - paddleHalfWidth;
+            this.state.paddleTargetX = Math.max(8, Math.min(this.gameWidth - (paddleHalfWidth * 2) - 8, xInGame));
         };
 
         this.canvas.addEventListener('mousemove', (e) => {
@@ -43,11 +51,14 @@ class InputManager {
             }
         });
 
-        // 2. Direct Mobile Touch Controls on Canvas
+        // 2. Direct Mobile Touch Controls on Canvas & Container
+        let touchActive = false;
+
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.state.isUsingTouch = true;
             this.state.isUsingMouse = false;
+            touchActive = true;
             if (e.touches.length > 0) {
                 handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
             }
@@ -61,6 +72,17 @@ class InputManager {
                 handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (touchActive && e.touches.length > 0) {
+                this.state.isUsingTouch = true;
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            touchActive = false;
+        }, { passive: true });
 
         // 3. Dedicated Touch Bar underneath canvas
         const touchBar = document.getElementById('mobileTouchBar');
