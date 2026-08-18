@@ -18,8 +18,18 @@ function copyDir(src, dest) {
 
 export default defineConfig({
   server: {
+    host: true,
+    port: 5173,
     watch: {
       ignored: ['**/android/**', '**/dist/**', '**/*.apk']
+    }
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        sandbox: path.resolve(__dirname, 'sandbox.html')
+      }
     }
   },
   plugins: [

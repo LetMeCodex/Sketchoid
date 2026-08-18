@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKETCHOID &bull; Android Mobile Sandbox & Device Simulator</title>
+    <!-- Google Fonts Preconnect & Stylesheet -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --sb-bg: #0f172a;
+            --sb-panel: #1e293b;
+            --sb-panel-border: #334155;
+            --sb-accent: #38bdf8;
+            --sb-accent-hover: #0ea5e9;
+            --sb-text: #f8fafc;
+            --sb-text-muted: #94a3b8;
+            --font-main: 'Plus Jakarta Sans', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sketch: 'Architects Daughter', cursive;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: var(--sb-bg);
+            color: var(--sb-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Top Sandbox Navbar */
+        header.sb-header {
+            background: var(--sb-panel);
+            border-bottom: 1px solid var(--sb-panel-border);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sb-badge {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: #fff;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .sb-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sb-title span.sketch-word {
+            font-family: var(--font-sketch);
+            color: #fbbf24;
+            font-size: 1.25rem;
+        }
+
+        /* Toolbar Controls */
+        .sb-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sb-control-group {
+            display: flex;
+            align-items: center;
+            background: #0f172a;
+            border: 1px solid var(--sb-panel-border);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .sb-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--sb-text-muted);
+            padding: 0 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select.sb-select {
+            background: transparent;
+            color: var(--sb-text);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+        }
+        select.sb-select option {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        .sb-btn {
+            background: transparent;
+            border: none;
+            color: var(--sb-text);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .sb-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+        .sb-btn.active {
+            background: var(--sb-accent);
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .sb-btn-primary {
+            background: #0284c7;
+            color: #fff;
+            border: 1px solid #0369a1;
+        }
+        .sb-btn-primary:hover {
+            background: #0ea5e9;
+        }
+
+        .sb-btn-action {
+            background: #334155;
+            color: #f8fafc;
+        }
+        .sb-btn-action:hover {
+            background: #475569;
+        }
+
+        /* Main Workbench Workspace */
+        main.sb-workbench {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: auto;
+            padding: 24px;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.04) 0%, transparent 60%),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 24px 24px, 24px 24px;
+        }
+
+        /* Workspace Grid Split for Dual View */
+        .sb-viewport-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: center center;
+        }
+
+        /* Android Phone Frame Mockup */
+        .phone-mockup {
+            position: relative;
+            background: #18181b;
+            border-radius: 46px;
+            padding: 12px;
+            box-shadow: 
+                0 0 0 4px #27272a,
+                0 0 0 6px #09090b,
+                0 25px 60px -15px rgba(0, 0, 0, 0.75),
+                0 0 40px rgba(56, 189, 248, 0.15);
+            transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Speaker & Dynamic Punch Hole Camera */
+        .phone-notch {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 14px;
+            height: 14px;
+            background: #000;
+            border-radius: 50%;
+            z-index: 50;
+            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.3), 0 0 3px rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .phone-notch::after {
+            content: '';
+            width: 5px;
+            height: 5px;
+            background: #1e3a8a;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        /* Android Status Bar */
+        .phone-status-bar {
+            position: absolute;
+            top: 14px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #18181b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            z-index: 45;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+            padding: 0 4px;
+        }
+        .phone-status-icons {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Phone Screen Frame */
+        .phone-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #faf6ee;
+            border-radius: 36px;
+            overflow: hidden;
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+        }
+
+        /* Embedded Game Iframe */
+        .game-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            display: block;
+        }
+
+        /* Android Bottom Navigation Pill */
+        .phone-home-pill {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 110px;
+            height: 4px;
+            background: #27272a;
+            border-radius: 99px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.75;
+        }
+
+        /* Touch Pointer Emulator */
+        .touch-pointer-emulator {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: rgba(56, 189, 248, 0.35);
+            border: 2px solid rgba(56, 189, 248, 0.85);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+            transition: transform 0.08s ease, background 0.08s ease;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+        }
+        .touch-pointer-emulator.touching {
+            background: rgba(244, 63, 94, 0.5);
+            border-color: #f43f5e;
+            transform: translate(-50%, -50%) scale(0.85);
+            box-shadow: 0 0 16px rgba(244, 63, 94, 0.8);
+        }
+
+        /* Desktop Companion View (for Dual Split View) */
+        .desktop-companion-view {
+            display: none;
+            flex-direction: column;
+            width: 640px;
+            height: 720px;
+            background: #1e293b;
+            border: 1px solid var(--sb-panel-border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        .desktop-companion-header {
+            background: #0f172a;
+            padding: 8px 16px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--sb-text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--sb-panel-border);
+        }
+        .desktop-companion-view iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+        }
+
+        /* Floating Dev Quick-Dock */
+        .sb-quick-dock {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 6px 12px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            z-index: 100;
+        }
+
+        .dock-tag {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--sb-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 4px;
+        }
+
+        .dock-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dock-btn:hover {
+            background: var(--sb-accent);
+            color: #0f172a;
+            border-color: var(--sb-accent);
+            transform: translateY(-1px);
+        }
+
+        /* QR Code Modal Popover */
+        .sb-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .sb-modal-card {
+            background: #1e293b;
+            border: 1px solid var(--sb-panel-border);
+            border-radius: 20px;
+            padding: 24px;
+            width: 380px;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+        }
+        .sb-modal-card h3 {
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .sb-modal-card p {
+            font-size: 0.82rem;
+            color: var(--sb-text-muted);
+            margin-bottom: 16px;
+        }
+        #qrcode-container {
+            background: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        .sb-ip-box {
+            background: #0f172a;
+            border: 1px dashed var(--sb-accent);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #38bdf8;
+            margin-bottom: 16px;
+            word-break: break-all;
+        }
+
+        /* FPS & Dimension Overlay */
+        .sb-info-pill {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Sandbox Navbar -->
+    <header class="sb-header">
+        <div class="sb-brand">
+            <div class="sb-badge">SANDBOX 2.0</div>
+            <div class="sb-title">
+                <span class="sketch-word">Sketchoid</span>
+                <span>Android Mobile Simulator</span>
+            </div>
+            <div class="sb-info-pill" id="dimDisplay">412 &times; 915 px (20:9)</div>
+        </div>
+
+        <div class="sb-toolbar">
+            <!-- Preset Selector -->
+            <div class="sb-control-group">
+                <span class="sb-label">Device</span>
+                <select id="devicePreset" class="sb-select" onchange="onPresetChange(this.value)">
+                    <option value="pixel8" selected>📱 Pixel 8 / 9 Pro (412 &times; 915)</option>
+                    <option value="galaxyS24">📱 Galaxy S24 Ultra (412 &times; 919)</option>
+                    <option value="compact">📱 Compact Phone (360 &times; 800)</option>
+                    <option value="iphone15">📱 iPhone 15 Pro (393 &times; 852)</option>
+                    <option value="tablet">📱 Android Tablet (768 &times; 1024)</option>
+                </select>
+            </div>
+
+            <!-- Orientation Switch -->
+            <div class="sb-control-group">
+                <span class="sb-label">Mode</span>
+                <button id="btnPortrait" class="sb-btn active" onclick="setOrientation('portrait')">↕️ Portrait</button>
+                <button id="btnLandscape" class="sb-btn" onclick="setOrientation('landscape')">↔️ Landscape</button>
+            </div>
+
+            <!-- Scale Zoom -->
+            <div class="sb-control-group">
+                <span class="sb-label">Zoom</span>
+                <button class="sb-btn" onclick="setScale(0.70)">70%</button>
+                <button class="sb-btn" onclick="setScale(0.85)">85%</button>
+                <button class="sb-btn active" id="btnScale100" onclick="setScale(1.0)">100%</button>
+                <button class="sb-btn" onclick="setScale('fit')">Fit</button>
+            </div>
+
+            <!-- Dual View Toggle -->
+            <button id="btnDualView" class="sb-btn sb-btn-action" onclick="toggleDualView()">
+                <span>💻📱 Side-by-Side Dual View</span>
+            </button>
+
+            <!-- Real Phone LAN QR Code -->
+            <button class="sb-btn sb-btn-primary" onclick="openQrModal()">
+                <span>📶 Phone Link / QR</span>
+            </button>
+
+            <!-- Reload Iframe -->
+            <button class="sb-btn sb-btn-action" title="Reload Game" onclick="reloadFrame()">
+                <span>🔄 Reload</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workbench Workspace -->
+    <main class="sb-workbench" id="sbWorkbench">
+        <div class="sb-viewport-container" id="viewportContainer">
+            
+            <!-- Desktop Companion (Left side in Dual View) -->
+            <div class="desktop-companion-view" id="desktopCompanion">
+                <div class="desktop-companion-header">
+                    <span>🖥️ DESKTOP VIEWPORT (Live)</span>
+                    <button class="sb-btn" onclick="document.getElementById('desktopIframe').contentWindow.location.reload()">🔄</button>
+                </div>
+                <iframe id="desktopIframe" src="index.html" class="game-iframe"></iframe>
+            </div>
+
+            <!-- Android Mobile Phone Mockup -->
+            <div class="phone-mockup" id="phoneMockup" style="width: 412px; height: 915px;">
+                <!-- Punch Hole Selfie Camera -->
+                <div class="phone-notch"></div>
+
+                <!-- Android Status Bar -->
+                <div class="phone-status-bar">
+                    <span id="phoneClock">12:00</span>
+                    <div class="phone-status-icons">
+                        <span>5G</span>
+                        <span>📶</span>
+                        <span>100% 🔋</span>
+                    </div>
+                </div>
+
+                <!-- Touch Pointer Emulator -->
+                <div class="touch-pointer-emulator" id="touchEmulator"></div>
+
+                <!-- Phone Glass Screen & Game Frame -->
+                <div class="phone-screen" id="phoneScreen">
+                    <iframe id="gameIframe" src="index.html" class="game-iframe"></iframe>
+                </div>
+
+                <!-- Bottom Gesture Pill -->
+                <div class="phone-home-pill"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Floating Dev Quick-Dock -->
+    <footer class="sb-quick-dock">
+        <span class="dock-tag">⚡ DEV TEST LAB</span>
+        <button class="dock-btn" onclick="execInGame('startGame', 0)">🚀 Stage 1</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 1)">🌀 Stage 2 (Portals)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 2)">🧼 Boss 1 (Eraser)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 3)">🖋️ Boss 2 (Living Ink)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 4)">✏️ Boss 3 (Arch-Pencil)</button>
+        <button class="dock-btn" onclick="toggleGodMode()">🛡️ God Mode</button>
+        <button class="dock-btn" onclick="grantInk()">💰 +500 Ink</button>
+        <button class="dock-btn" onclick="toggleThemeInGame()">🌗 Day/Night</button>
+    </footer>
+
+    <!-- QR Code LAN Modal -->
+    <div class="sb-modal-overlay" id="qrModal" onclick="if(event.target===this) closeQrModal()">
+        <div class="sb-modal-card">
+            <h3>📱 Test on Real Phone</h3>
+            <p>Scan this QR code with your phone camera or open the URL in your phone's browser (while connected to the same Wi-Fi):</p>
+            <div id="qrcode-container"></div>
+            <div class="sb-ip-box" id="lanUrlBox">http://localhost:5173</div>
+            <button class="sb-btn sb-btn-primary" style="width: 100%; justify-content: center; padding: 8px;" onclick="closeQrModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Preset Device Profiles (width, height in px)
+        const PRESETS = {
+            pixel8: { name: 'Pixel 8 / 9 Pro', w: 412, h: 915, ratio: '20:9' },
+            galaxyS24: { name: 'Galaxy S24 Ultra', w: 412, h: 919, ratio: '19.5:9' },
+            compact: { name: 'Compact Phone', w: 360, h: 800, ratio: '20:9' },
+            iphone15: { name: 'iPhone 15 Pro', w: 393, h: 852, ratio: '19.5:9' },
+            tablet: { name: 'Android Tablet', w: 768, h: 1024, ratio: '4:3' }
+        };
+
+        let currentPresetKey = 'pixel8';
+        let currentOrientation = 'portrait';
+        let currentScale = 1.0;
+        let isDualView = false;
+        let isGodMode = false;
+
+        const mockup = document.getElementById('phoneMockup');
+        const dimDisplay = document.getElementById('dimDisplay');
+        const phoneClock = document.getElementById('phoneClock');
+        const gameIframe = document.getElementById('gameIframe');
+        const touchEmulator = document.getElementById('touchEmulator');
+        const phoneScreen = document.getElementById('phoneScreen');
+
+        // Live Clock Updater
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const mins = now.getMinutes().toString().padStart(2, '0');
+            phoneClock.innerText = `${hours}:${mins}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Apply Preset Dimensions
+        function applyDimensions() {
+            const preset = PRESETS[currentPresetKey];
+            let w = preset.w;
+            let h = preset.h;
+
+            if (currentOrientation === 'landscape') {
+                const temp = w;
+                w = h;
+                h = temp;
+            }
+
+            mockup.style.width = `${w}px`;
+            mockup.style.height = `${h}px`;
+            dimDisplay.innerText = `${w} × ${h} px (${currentOrientation === 'portrait' ? preset.ratio : 'Landscape'})`;
+
+            applyScale();
+        }
+
+        function onPresetChange(key) {
+            currentPresetKey = key;
+            applyDimensions();
+        }
+
+        function setOrientation(mode) {
+            currentOrientation = mode;
+            document.getElementById('btnPortrait').classList.toggle('active', mode === 'portrait');
+            document.getElementById('btnLandscape').classList.toggle('active', mode === 'landscape');
+            applyDimensions();
+        }
+
+        function setScale(scale) {
+            currentScale = scale;
+            document.querySelectorAll('.sb-toolbar .sb-btn').forEach(btn => {
+                if (btn.innerText.includes('%') || btn.innerText === 'Fit') {
+                    btn.classList.remove('active');
+                }
+            });
+
+            if (scale === 'fit') {
+                const availH = window.innerHeight - 150;
+                const availW = window.innerWidth - 60;
+                const targetH = parseInt(mockup.style.height) || 915;
+                const scaleVal = Math.min(availH / targetH, 1.0);
+                document.getElementById('viewportContainer').style.transform = `scale(${scaleVal})`;
+            } else {
+                document.getElementById('viewportContainer').style.transform = `scale(${scale})`;
+            }
+        }
+
+        function applyScale() {
+            if (currentScale === 'fit') {
+                setScale('fit');
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (currentScale === 'fit') setScale('fit');
+        });
+
+        // Dual Split View Toggle
+        function toggleDualView() {
+            isDualView = !isDualView;
+            document.getElementById('desktopCompanion').style.display = isDualView ? 'flex' : 'none';
+            document.getElementById('btnDualView').classList.toggle('active', isDualView);
+            setScale(isDualView ? 0.75 : 1.0);
+        }
+
+        // Frame Reloader
+        function reloadFrame() {
+            gameIframe.src = 'index.html?t=' + Date.now();
+            if (isDualView) {
+                document.getElementById('desktopIframe').src = 'index.html?t=' + Date.now();
+            }
+        }
+
+        // Touch Cursor Visualizer
+        phoneScreen.addEventListener('mousemove', (e) => {
+            const rect = phoneScreen.getBoundingClientRect();
+            touchEmulator.style.display = 'block';
+            touchEmulator.style.left = `${e.clientX - rect.left}px`;
+            touchEmulator.style.top = `${e.clientY - rect.top}px`;
+        });
+
+        phoneScreen.addEventListener('mouseleave', () => {
+            touchEmulator.style.display = 'none';
+        });
+
+        phoneScreen.addEventListener('mousedown', () => {
+            touchEmulator.classList.add('touching');
+        });
+
+        phoneScreen.addEventListener('mouseup', () => {
+            touchEmulator.classList.remove('touching');
+        });
+
+        // Dev Lab Commands Bridge
+        function execInGame(method, ...args) {
+            try {
+                const win = gameIframe.contentWindow;
+                if (win && win.game && typeof win.game[method] === 'function') {
+                    win.game[method](...args);
+                }
+            } catch (e) {
+                console.warn("Dev Lab Command execution failed:", e);
+            }
+        }
+
+        function toggleGodMode() {
+            try {
+                const win = gameIframe.contentWindow;
+                if (win && win.game) {
+                    win.game.godMode = !win.game.godMode;
+                    isGodMode = win.game.godMode;
+                    alert(`God Mode: ${isGodMode ? 'ACTIVE (Invulnerable)' : 'DISABLED'}`);
+                }
+            } catch (e) {}
+        }
+
+        function grantInk() {
+            try {
+                const win = gameIframe.contentWindow;
+                if (win && win.progression) {
+                    win.progression.addInk(500);
+                    win.progression.addXp(300);
+                    if (win.game) win.game.updateHUD();
+                }
+            } catch (e) {}
+        }
+
+        function toggleThemeInGame() {
+            try {
+                const win = gameIframe.contentWindow;
+                if (win && win.game && win.game.themeToggle) {
+                    win.game.themeToggle.toggleTheme();
+                }
+            } catch (e) {}
+        }
+
+        // QR Code Generator
+        function openQrModal() {
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = '';
+            
+            const currentUrl = window.location.origin;
+            document.getElementById('lanUrlBox').innerText = currentUrl;
+
+            new QRCode(qrContainer, {
+                text: currentUrl,
+                width: 180,
+                height: 180,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+
+        function closeQrModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        // Init
+        applyDimensions();
+    </script>
+</body>
+</html>
