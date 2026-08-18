@@ -349,22 +349,39 @@
             border: none;
         }
 
-        /* Floating Dev Quick-Dock */
+        /* Floating Dev Quick-Dock (Right Side Drawer Panel) */
         .sb-quick-dock {
             position: fixed;
-            bottom: 18px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(30, 41, 59, 0.85);
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(30, 41, 59, 0.92);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            padding: 6px 12px;
-            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 10px;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+            z-index: 100;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 175px;
+        }
+
+        .sb-quick-dock.collapsed {
+            transform: translateY(-50%) translateX(calc(100% - 36px));
+            opacity: 0.85;
+        }
+
+        .dock-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-            z-index: 100;
+            justify-content: space-between;
+            padding: 0 4px 6px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2px;
         }
 
         .dock-tag {
@@ -373,28 +390,45 @@
             color: var(--sb-accent);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-right: 4px;
+        }
+
+        .dock-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--sb-text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+        .dock-toggle-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .dock-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.09);
             color: #f8fafc;
-            padding: 5px 12px;
-            border-radius: 99px;
+            padding: 6px 10px;
+            border-radius: 8px;
             font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.15s ease;
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 4px;
+            justify-content: flex-start;
+            gap: 6px;
+            width: 100%;
         }
         .dock-btn:hover {
             background: var(--sb-accent);
             color: #0f172a;
             border-color: var(--sb-accent);
-            transform: translateY(-1px);
+            transform: translateX(-2px);
         }
 
         /* QR Code Modal Popover */
@@ -561,18 +595,21 @@
         </div>
     </main>
 
-    <!-- Floating Dev Quick-Dock -->
-    <footer class="sb-quick-dock">
-        <span class="dock-tag">⚡ DEV TEST LAB</span>
+    <!-- Floating Dev Quick-Dock (Right Side Panel) -->
+    <aside class="sb-quick-dock" id="sbQuickDock">
+        <div class="dock-header">
+            <span class="dock-tag">⚡ DEV TEST LAB</span>
+            <button class="dock-toggle-btn" title="Toggle Drawer" onclick="toggleDock()">▶</button>
+        </div>
         <button class="dock-btn" onclick="execInGame('startGame', 0)">🚀 Stage 1</button>
-        <button class="dock-btn" onclick="execInGame('startGame', 1)">🌀 Stage 2 (Portals)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 1)">🌀 Stage 2</button>
         <button class="dock-btn" onclick="execInGame('startGame', 2)">🧼 Boss 1 (Eraser)</button>
-        <button class="dock-btn" onclick="execInGame('startGame', 3)">🖋️ Boss 2 (Living Ink)</button>
-        <button class="dock-btn" onclick="execInGame('startGame', 4)">✏️ Boss 3 (Arch-Pencil)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 3)">🖋️ Boss 2 (Ink)</button>
+        <button class="dock-btn" onclick="execInGame('startGame', 4)">✏️ Boss 3 (Pencil)</button>
         <button class="dock-btn" onclick="toggleGodMode()">🛡️ God Mode</button>
         <button class="dock-btn" onclick="grantInk()">💰 +500 Ink</button>
-        <button class="dock-btn" onclick="toggleThemeInGame()">🌗 Day/Night</button>
-    </footer>
+        <button class="dock-btn" onclick="toggleThemeInGame()">🌗 Day / Night</button>
+    </aside>
 
     <!-- QR Code LAN Modal -->
     <div class="sb-modal-overlay" id="qrModal" onclick="if(event.target===this) closeQrModal()">
@@ -782,6 +819,13 @@
 
         function closeQrModal() {
             document.getElementById('qrModal').style.display = 'none';
+        }
+
+        function toggleDock() {
+            const dock = document.getElementById('sbQuickDock');
+            dock.classList.toggle('collapsed');
+            const btn = dock.querySelector('.dock-toggle-btn');
+            btn.innerText = dock.classList.contains('collapsed') ? '◀' : '▶';
         }
 
         // Init
