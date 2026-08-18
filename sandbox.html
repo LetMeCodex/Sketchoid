@@ -329,8 +329,11 @@
             background: #1e293b;
             border: 1px solid var(--sb-panel-border);
             border-radius: 20px;
-            overflow: hidden;
+            overflow: visible;
+            position: relative;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            min-width: 320px;
+            min-height: 400px;
         }
         .desktop-companion-header {
             background: #0f172a;
@@ -342,11 +345,77 @@
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid var(--sb-panel-border);
+            cursor: grab;
+            border-radius: 20px 20px 0 0;
+            user-select: none;
+        }
+        .desktop-companion-header:active {
+            cursor: grabbing;
         }
         .desktop-companion-view iframe {
             width: 100%;
             flex: 1;
             border: none;
+            border-radius: 0 0 20px 20px;
+        }
+
+        /* Draggable & Resizable Window Controls */
+        .is-dragging iframe {
+            pointer-events: none !important;
+        }
+
+        .phone-drag-handle {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #94a3b8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 99px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            letter-spacing: 0.5px;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            z-index: 60;
+            user-select: none;
+        }
+        .phone-drag-handle:hover,
+        .phone-drag-handle:active {
+            background: var(--sb-accent);
+            color: #0f172a;
+            cursor: grabbing;
+        }
+
+        /* Resizable Grips */
+        .sb-resize-handle {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 22px;
+            height: 22px;
+            cursor: nwse-resize;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1;
+            user-select: none;
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        .sb-resize-handle:hover {
+            color: var(--sb-accent);
+            transform: scale(1.25);
         }
 
         /* Floating Dev Quick-Dock (Right Side Drawer Panel) */
@@ -540,6 +609,11 @@
                 <span>💻📱 Side-by-Side Dual View</span>
             </button>
 
+            <!-- Reset Layout -->
+            <button class="sb-btn sb-btn-action" title="Reset Layout & Positions" onclick="resetWindowPositions()">
+                <span>🎯 Reset Layout</span>
+            </button>
+
             <!-- Real Phone LAN QR Code -->
             <button class="sb-btn sb-btn-primary" onclick="openQrModal()">
                 <span>📶 Phone Link / QR</span>
@@ -558,15 +632,21 @@
             
             <!-- Desktop Companion (Left side in Dual View) -->
             <div class="desktop-companion-view" id="desktopCompanion">
-                <div class="desktop-companion-header">
-                    <span>🖥️ DESKTOP VIEWPORT (Live)</span>
+                <div class="desktop-companion-header" id="desktopDragHandle">
+                    <span>🖥️ DESKTOP VIEWPORT (Drag to Move)</span>
                     <button class="sb-btn" onclick="document.getElementById('desktopIframe').contentWindow.location.reload()">🔄</button>
                 </div>
                 <iframe id="desktopIframe" src="index.html" class="game-iframe"></iframe>
+                <div class="sb-resize-handle" id="desktopResizeHandle" title="Drag to Resize Desktop View">⤡</div>
             </div>
 
             <!-- Android Mobile Phone Mockup -->
             <div class="phone-mockup" id="phoneMockup" style="width: 412px; height: 915px;">
+                <!-- Drag Handle -->
+                <div class="phone-drag-handle" id="phoneDragHandle">
+                    <span style="opacity: 0.6;">⠿</span> MOVE PHONE
+                </div>
+
                 <!-- Punch Hole Selfie Camera -->
                 <div class="phone-notch"></div>
 
@@ -590,6 +670,9 @@
 
                 <!-- Bottom Gesture Pill -->
                 <div class="phone-home-pill"></div>
+
+                <!-- Resize Grip -->
+                <div class="sb-resize-handle" id="phoneResizeHandle" title="Drag to Resize Phone Frame">⤡</div>
             </div>
 
         </div>
@@ -821,12 +904,120 @@
             document.getElementById('qrModal').style.display = 'none';
         }
 
-        function toggleDock() {
-            const dock = document.getElementById('sbQuickDock');
-            dock.classList.toggle('collapsed');
-            const btn = dock.querySelector('.dock-toggle-btn');
-            btn.innerText = dock.classList.contains('collapsed') ? '◀' : '▶';
+        let highestZIndex = 100;
+        function bringToFront(el) {
+            highestZIndex += 1;
+            el.style.zIndex = highestZIndex;
         }
+
+        // Universal Window Drag Engine
+        function makeDraggable(element, handle) {
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+            let initialLeft = 0;
+            let initialTop = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+                isDragging = true;
+                bringToFront(element);
+                document.body.classList.add('is-dragging');
+
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = element.offsetLeft;
+                initialTop = element.offsetTop;
+
+                const onMouseMove = (moveEvent) => {
+                    if (!isDragging) return;
+                    const scaleFactor = (currentScale === 'fit' ? 1.0 : currentScale) || 1.0;
+                    const dx = (moveEvent.clientX - startX) / (currentScale === 'fit' ? 1.0 : scaleFactor);
+                    const dy = (moveEvent.clientY - startY) / (currentScale === 'fit' ? 1.0 : scaleFactor);
+                    element.style.position = 'relative';
+                    element.style.left = `${initialLeft + dx}px`;
+                    element.style.top = `${initialTop + dy}px`;
+                };
+
+                const onMouseUp = () => {
+                    isDragging = false;
+                    document.body.classList.remove('is-dragging');
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                };
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+                e.preventDefault();
+            });
+
+            element.addEventListener('mousedown', () => bringToFront(element));
+        }
+
+        // Universal Window Resize Engine
+        function makeResizable(element, handle, onResize) {
+            let isResizing = false;
+            let startX = 0;
+            let startY = 0;
+            let startWidth = 0;
+            let startHeight = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                bringToFront(element);
+                document.body.classList.add('is-dragging');
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = element.offsetWidth;
+                startHeight = element.offsetHeight;
+
+                const onMouseMove = (moveEvent) => {
+                    if (!isResizing) return;
+                    const scaleFactor = (currentScale === 'fit' ? 1.0 : currentScale) || 1.0;
+                    const dw = (moveEvent.clientX - startX) / (currentScale === 'fit' ? 1.0 : scaleFactor);
+                    const dh = (moveEvent.clientY - startY) / (currentScale === 'fit' ? 1.0 : scaleFactor);
+
+                    const newW = Math.max(280, Math.round(startWidth + dw));
+                    const newH = Math.max(350, Math.round(startHeight + dh));
+
+                    element.style.width = `${newW}px`;
+                    element.style.height = `${newH}px`;
+
+                    if (onResize) onResize(newW, newH);
+                };
+
+                const onMouseUp = () => {
+                    isResizing = false;
+                    document.body.classList.remove('is-dragging');
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                };
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        }
+
+        function resetWindowPositions() {
+            mockup.style.left = '0px';
+            mockup.style.top = '0px';
+            const desktop = document.getElementById('desktopCompanion');
+            desktop.style.left = '0px';
+            desktop.style.top = '0px';
+            applyDimensions();
+        }
+
+        // Initialize Drag & Resize on Windows
+        makeDraggable(mockup, document.getElementById('phoneDragHandle'));
+        makeDraggable(document.getElementById('desktopCompanion'), document.getElementById('desktopDragHandle'));
+        
+        makeResizable(mockup, document.getElementById('phoneResizeHandle'), (w, h) => {
+            dimDisplay.innerText = `${w} × ${h} px (Custom Resized)`;
+        });
+        makeResizable(document.getElementById('desktopCompanion'), document.getElementById('desktopResizeHandle'));
 
         // Init
         applyDimensions();
