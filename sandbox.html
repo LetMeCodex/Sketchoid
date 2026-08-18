@@ -176,8 +176,8 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            overflow: auto;
-            padding: 24px;
+            overflow: hidden;
+            padding: 10px 20px 70px 20px;
             background: 
                 radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.04) 0%, transparent 60%),
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -191,7 +191,7 @@
             align-items: center;
             justify-content: center;
             gap: 40px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             transform-origin: center center;
         }
 
@@ -206,9 +206,10 @@
                 0 0 0 6px #09090b,
                 0 25px 60px -15px rgba(0, 0, 0, 0.75),
                 0 0 40px rgba(56, 189, 248, 0.15);
-            transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease;
+            transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
+            flex-shrink: 0;
         }
 
         /* Speaker & Dynamic Punch Hole Camera */
@@ -493,10 +494,10 @@
             <!-- Scale Zoom -->
             <div class="sb-control-group">
                 <span class="sb-label">Zoom</span>
-                <button class="sb-btn" onclick="setScale(0.70)">70%</button>
-                <button class="sb-btn" onclick="setScale(0.85)">85%</button>
-                <button class="sb-btn active" id="btnScale100" onclick="setScale(1.0)">100%</button>
-                <button class="sb-btn" onclick="setScale('fit')">Fit</button>
+                <button class="sb-btn active" id="btnScaleFit" onclick="setScale('fit')">⚡ Auto-Fit</button>
+                <button class="sb-btn" id="btnScale100" onclick="setScale(1.0)">100%</button>
+                <button class="sb-btn" id="btnScale85" onclick="setScale(0.85)">85%</button>
+                <button class="sb-btn" id="btnScale70" onclick="setScale(0.70)">70%</button>
             </div>
 
             <!-- Dual View Toggle -->
@@ -595,7 +596,7 @@
 
         let currentPresetKey = 'pixel8';
         let currentOrientation = 'portrait';
-        let currentScale = 1.0;
+        let currentScale = 'fit';
         let isDualView = false;
         let isGodMode = false;
 
@@ -650,18 +651,27 @@
         function setScale(scale) {
             currentScale = scale;
             document.querySelectorAll('.sb-toolbar .sb-btn').forEach(btn => {
-                if (btn.innerText.includes('%') || btn.innerText === 'Fit') {
+                if (btn.innerText.includes('%') || btn.innerText.includes('Fit')) {
                     btn.classList.remove('active');
                 }
             });
 
             if (scale === 'fit') {
-                const availH = window.innerHeight - 150;
-                const availW = window.innerWidth - 60;
-                const targetH = parseInt(mockup.style.height) || 915;
-                const scaleVal = Math.min(availH / targetH, 1.0);
-                document.getElementById('viewportContainer').style.transform = `scale(${scaleVal})`;
+                document.getElementById('btnScaleFit')?.classList.add('active');
+                const headerH = document.querySelector('.sb-header')?.offsetHeight || 52;
+                const dockH = document.querySelector('.sb-quick-dock')?.offsetHeight || 50;
+                const availH = window.innerHeight - headerH - dockH - 45;
+                const availW = isDualView ? (window.innerWidth - 80) : (window.innerWidth - 60);
+                
+                const targetH = (parseInt(mockup.style.height) || 915) + 30;
+                const targetW = isDualView ? ((parseInt(mockup.style.width) || 412) + 680) : ((parseInt(mockup.style.width) || 412) + 30);
+                
+                const scaleVal = Math.max(0.35, Math.min(availH / targetH, availW / targetW, 1.0));
+                document.getElementById('viewportContainer').style.transform = `scale(${scaleVal.toFixed(3)})`;
             } else {
+                if (scale === 1.0) document.getElementById('btnScale100')?.classList.add('active');
+                else if (scale === 0.85) document.getElementById('btnScale85')?.classList.add('active');
+                else if (scale === 0.70) document.getElementById('btnScale70')?.classList.add('active');
                 document.getElementById('viewportContainer').style.transform = `scale(${scale})`;
             }
         }
