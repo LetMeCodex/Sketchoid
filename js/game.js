@@ -1272,7 +1272,14 @@ class Game {
     }
 
     loop(currentTime) {
-        const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+        if (document.hidden) {
+            this.lastTime = currentTime;
+            requestAnimationFrame((t) => this.loop(t));
+            return;
+        }
+
+        const rawDt = this.lastTime ? (currentTime - this.lastTime) / 1000 : 0.016;
+        const dt = Math.min(Math.max(0, rawDt), 0.05);
         this.lastTime = currentTime;
 
         this.update(dt);
@@ -1282,6 +1289,10 @@ class Game {
     }
 
     start() {
+        document.addEventListener('visibilitychange', () => {
+            this.lastTime = performance.now();
+        });
+
         requestAnimationFrame((t) => {
             this.lastTime = t;
             this.loop(t);
